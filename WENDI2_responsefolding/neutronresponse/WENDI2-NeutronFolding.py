@@ -34,7 +34,7 @@ fluence = dN_dE * dE # to get the fluence (neutrons/cm^2) I have to multiply my 
 
 E_center = np.sqrt(E_min * E_max) # the geometric mean for log-scaled bin centers
 
-lethargy = dN_dE * E_center # the lethargy 
+lethargy = dN_dE * (E_center/1000) # the lethargy 
 
 fig, ax1 = plt.subplots(figsize=(10, 6))
 
