@@ -93,7 +93,7 @@ fig1, ax1 = plt.subplots(figsize=(8, 5))
 ax1.loglog(energy_fluence_to_H10_photons, fluence_to_H10_photons, 
            color='blue', marker='o', linestyle='-', linewidth=1.5, label='ICRP 74 + Pelliccioni')
 ax1.set_xlabel('Energy (MeV)', fontsize=11)
-ax1.set_ylabel('Fluence-to-$H^*(10)$ Conversion Factor ($pSv \cdot cm^2$)', fontsize=11)
+ax1.set_ylabel('Fluence-to-$H^*(10)$ Conversion Factor ($pSv cm^2$)', fontsize=11)
 ax1.set_title('Raw Photon Fluence-to-$H^*(10)$ Conversion Coefficients', fontsize=12, pad=10)
 ax1.grid(True, which="both", linestyle="--", alpha=0.5)
 ax1.legend()
@@ -142,7 +142,7 @@ ax3.loglog(energy_fluence_to_H10_photons, FH40G_absolute_response_to_H10,
            color='orange', marker='^', linestyle='--', linewidth=1.8, label='FH40G Absolute Photon Response')
 
 ax3.set_xlabel('Energy (MeV)', fontsize=11)
-ax3.set_ylabel('Response Factor ($pSv \cdot cm^2$)', fontsize=11)
+ax3.set_ylabel('Response Factor ($pSv cm^2$)', fontsize=11)
 ax3.set_title('Comparison of Ideal and FH40G Absolute Photon Dose Response', fontsize=12, pad=10)
 ax3.grid(True, which="both", linestyle="--", alpha=0.5)
 ax3.legend()
