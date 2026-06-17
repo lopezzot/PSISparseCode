@@ -240,3 +240,48 @@ if global_bias < 1.0:
     print(f"-> Field measurements must be multiplied by {1.0/global_bias:.3f} to find the true H*(10).")
 else:
     print(f"-> The WENDI-2 OVER-RESPONDS by {(global_bias - 1.0)*100:.1f}%.")
+
+# --- 6. FINAL DIAGNOSTIC STACKED PLOT FOR NEUTRONS (Fluence, H*(10), Ratio) ---
+# Create a figure with 3 subplots stacked vertically, sharing the X-axis.
+fig_diag, axs = plt.subplots(3, 1, figsize=(10, 10), sharex=True, gridspec_kw={'height_ratios': [2, 1.5, 1.5]})
+
+# --- Plot 1: Neutron Fluence Spectrum ---
+# Using 'E_center' and 'fluence' directly since no zero-filtering is needed for neutrons
+axs[0].plot(E_center, fluence, color='blue', marker='.', linestyle='-', label='Neutron Fluence')
+axs[0].set_yscale('log')
+axs[0].set_ylabel('Fluence ($particles/cm^2$)', fontsize=11)
+axs[0].set_title('Dosimetric Analysis Pipeline for Neutrons at SwissFEL', fontsize=14, pad=15)
+axs[0].grid(True, which="both", ls="--", alpha=0.5)
+axs[0].legend(loc='upper right')
+
+# Remove bottom ticks to avoid visual overlap
+axs[0].tick_params(axis='x', labelbottom=False)
+
+# --- Plot 2: Interpolated H*(10) Conversion Factors ---
+# Using log scale for Y-axis since neutron H*(10) coefficients are strictly positive 
+# across the entire energy spectrum (unlike electrons/positrons)
+axs[1].plot(E_center, h10_interp, color='darkorange', linestyle='-', linewidth=2, label='ICRP 74 $H^*(10)$ Conversion')
+axs[1].set_yscale('log')
+axs[1].set_ylabel(r'$H^*(10)/\Phi$ ($pSv \cdot cm^2$)', fontsize=11)
+axs[1].grid(True, which="both", ls="--", alpha=0.5)
+axs[1].legend(loc='upper left')
+axs[1].tick_params(axis='x', labelbottom=False)
+
+# --- Plot 3: Interpolated WENDI-2 Relative Response ---
+# Note: 'ratio_interp' holds the WENDI-2 relative response ratio interpolated on 'E_center'
+axs[2].plot(E_center, ratio_interp, color='purple', linestyle='-', linewidth=2, label='WENDI-2 Relative Response')
+axs[2].axhline(1.0, color='red', linestyle='--', alpha=0.8, label='Ideal Response (1.0)')
+axs[2].set_xscale('log') 
+axs[2].set_xlabel('Energy ($MeV$)', fontsize=12)
+axs[2].set_ylabel('Measured / Ideal', fontsize=11)
+axs[2].grid(True, which="both", ls="--", alpha=0.5)
+axs[2].legend(loc='upper left')
+
+# Adjust layout to stick the three panels together
+plt.subplots_adjust(hspace=0.05)
+
+# Save the diagnostic plot
+diag_filename = 'diagnostic_pipeline_neutrons.png'
+plt.savefig(diag_filename, dpi=300, bbox_inches='tight')
+plt.close(fig_diag)
+print(f"Diagnostic 3-panel plot saved as '{diag_filename}'.")
