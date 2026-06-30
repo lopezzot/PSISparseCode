@@ -1,0 +1,5 @@
+backend:string=sf-archiver
+name:string=SIN-TIMAST-TMA:Bunch-2-Appl-Freq-RB
+start:string=2025-07-01 07:00:14.968
+end:string=2025-07-01 18:00:14.968
+bins:int32=200
