@@ -79,4 +79,79 @@ plt.tight_layout()
 # Save and export the final 3-panel synced plot
 output_filename = "swissfel_diagnostics_and_wendi.png"
 plt.savefig(output_filename, dpi=300)
+
 plt.show()
+# --- New Addition: Advanced filtering for true active plateaus (wider buffer & drop removal) ---
+
+# Align datetime precision to microseconds ('us') to prevent MergeError
+df['datetime'] = df['datetime'].dt.as_unit('us')
+df_wendi['datetime'] = df_wendi['datetime'].dt.as_unit('us')
+
+# Sort machine logs
+df = df.sort_values('datetime')
+
+# Create a wider stability window (shifting by 1 and 2 positions to clear longer transients)
+df['prev_freq_1'] = df['frequency_Hz'].shift(1)
+# 4 minutes before
+df['prev_freq_2'] = df['frequency_Hz'].shift(2)  
+df['next_freq_1'] = df['frequency_Hz'].shift(-1)
+# 4 minutes after
+df['next_freq_2'] = df['frequency_Hz'].shift(-2)  
+
+# Sort WENDI data
+df_wendi = df_wendi.sort_values('datetime')
+
+# Synchronize DataFrames with expanded machine state columns
+df_analysis = pd.merge_asof(
+    df_wendi,
+    df[['datetime', 'frequency_Hz', 'prev_freq_1', 'prev_freq_2', 'next_freq_1', 'next_freq_2']],
+    on='datetime',
+    direction='nearest'
+)
+
+# Configuration
+target_frequencies = [10, 25]
+tolerance = 0.5
+
+# Threshold to reject beam trips/interruptions when the machine is supposed to be ON.
+# Adjust this value if your background/noise level is different.
+dose_threshold = 20.0  # in µSv/h
+
+print("\n" + "="*75)
+print("  WENDI NEUTRON DOSE RATE ANALYSIS (TRUE ACTIVE PLATEAUS)")
+print("="*75)
+
+for freq in target_frequencies:
+    # 1. Time mask: requiring a 4-minute stable frequency window around the data point
+    time_mask = (
+        ((df_analysis['frequency_Hz'] - freq).abs() < tolerance) &
+        ((df_analysis['prev_freq_1'] - freq).abs() < tolerance) &
+        ((df_analysis['prev_freq_2'] - freq).abs() < tolerance) &
+        ((df_analysis['next_freq_1'] - freq).abs() < tolerance) &
+        ((df_analysis['next_freq_2'] - freq).abs() < tolerance)
+    )
+    
+    total_stable_seconds = time_mask.sum()
+    
+    # 2. Active mask: combining time stability with the dose threshold to remove beam drops
+    active_mask = time_mask & (df_analysis['val_ext'] > dose_threshold)
+    dose_rates_active = df_analysis.loc[active_mask, 'val_ext']
+    
+    n_points = len(dose_rates_active)
+    
+    if n_points > 0:
+        mean_dose = dose_rates_active.mean()
+        median_dose = dose_rates_active.median()
+        std_dose = dose_rates_active.std() if n_points > 1 else 0.0
+        sem_dose = dose_rates_active.sem() if n_points > 1 else 0.0
+        
+        print(f"\n[+] Frequency Regime: {freq} Hz")
+        print(f"    Total seconds in stable window       : {total_stable_seconds} s")
+        print(f"    Active beam seconds (> {dose_threshold} µSv/h) : {n_points} s")
+        print(f"    Mean Dose Rate (Active Beam)        : {mean_dose:.3f} ± {sem_dose:.3f} µSv/h (SEM)")
+        print(f"    Median Dose Rate (Robust Peak)      : {median_dose:.3f} µSv/h")
+        print(f"    Data Standard Deviation (σ)         : {std_dose:.3f} µSv/h")
+    else:
+        print(f"\n[-] Frequency Regime: {freq} Hz")
+        print(f"    No data points passed the active plateau criteria.")
+print("="*75 + "\n")
