@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -80,11 +81,26 @@ def load_lupin_data(filepath):
 # --- 2. GENERIC PLOTTING & ANALYSIS ENGINE ---
 # =============================================================================
 
-def analyze_and_plot_detector(df_det, df_mach, detector_name, dose_col, threshold, ylim_plot=[-10, 500], splits=None):
+def analyze_and_plot_detector(df_det, df_mach, detector_name, dose_col, threshold, ylim_plot=[-10, 500], splits=None, baseline_range=("07:00", "08:00")):
     """
     Synchronizes any detector with machine logs, generates a synchronized 3-panel plot (handling optional time splits),
     and calculates statistical dose rates for stable frequency plateaus independently per split.
     """
+    
+    # First calculate the baseline dose using baseline_range as temporal range
+    baseline_value = 0.0
+    if baseline_range is not None:
+        start_bg, end_bg = baseline_range
+        start_time = pd.to_datetime(start_bg).time()
+        end_time = pd.to_datetime(end_bg).time()
+        
+        mask_bg = (df_det['datetime'].dt.time >= start_time) & (df_det['datetime'].dt.time < end_time)
+        if mask_bg.any():
+            baseline_value = df_det.loc[mask_bg, dose_col].mean()
+            print(f"\n[*] Baseline calculated for {detector_name} ({start_bg} - {end_bg}): {baseline_value:.3f} µSv/h")
+        else:
+            print(f"\n[-] Warning: could not calculate baseline for {detector_name} in interval {start_bg} - {end_bg}.")
+
     # -------------------------------------------------------------------------
     # PART A: Synchronized 3-Panel Plotting
     # -------------------------------------------------------------------------
@@ -141,7 +157,11 @@ def analyze_and_plot_detector(df_det, df_mach, detector_name, dose_col, threshol
     ax3.xaxis.set_major_locator(mdates.HourLocator(interval=1))
 
     plt.tight_layout()
-    output_filename = f"swissfel_diagnostics_and_{detector_name.lower()}.png"
+    # --- Save images inside the target directory ---
+    output_dir = "MultiDetectorResults"
+    os.makedirs(output_dir, exist_ok=True)
+    output_filename = os.path.join(output_dir, f"swissfel_diagnostics_and_{detector_name.lower()}.png")
+    # -----------------------------------------------
     plt.savefig(output_filename, dpi=300)
     plt.show()
 
@@ -182,7 +202,7 @@ def analyze_and_plot_detector(df_det, df_mach, detector_name, dose_col, threshol
             
             n_points = len(dose_rates_active)
             display_label = f"{freq} Hz ({label_suffix})" if label_suffix else f"{freq} Hz"
-            
+
             if n_points > 0:
                 mean_dose = dose_rates_active.mean()
                 median_dose = dose_rates_active.median()
@@ -193,6 +213,15 @@ def analyze_and_plot_detector(df_det, df_mach, detector_name, dose_col, threshol
                 print(f"    Total intervals in stable window     : {total_stable_intervals}")
                 print(f"    Active beam intervals (> {threshold} µSv/h) : {n_points}")
                 print(f"    Mean Dose Rate (Active Beam)        : {mean_dose:.3f} ± {sem_dose:.3f} µSv/h (SEM)")
+                
+                # --- Print baseline and net dose if calculated ---
+                if baseline_range is not None and baseline_value > 0:
+                    net_dose = mean_dose - baseline_value
+                    print(f"    Baseline ({baseline_range[0]}-{baseline_range[1]})               : {baseline_value:.3f} µSv/h")
+                    # Assuming negligible error on the baseline, using active beam SEM only
+                    print(f"    Net Mean Dose Rate (Mean-Baseline)  : {net_dose:.3f} ± {sem_dose:.3f} µSv/h (SEM)")
+                # -------------------------------------------------       
+                
                 print(f"    Median Dose Rate (Robust Peak)      : {median_dose:.3f} µSv/h")
                 print(f"    Data Standard Deviation (σ)         : {std_dose:.3f} µSv/h")
             else:
@@ -263,8 +292,8 @@ if __name__ == "__main__":
     try:
         # Define sequential experimental configurations for LUPIN
         lupin_position_splits = [
-            {"name": "Position 1", "time_boundary": "10:30", "color": "#9467bd"}, # From 07:00 up to 10:30 (Purple)
-            {"name": "Position 2", "time_boundary": None,    "color": "#e377c2"}  # From 10:30 to end of log (Pink)
+            {"name": "LUPIN Position 1", "time_boundary": "10:30", "color": "#9467bd"}, # From 07:00 up to 10:30 (Purple)
+            {"name": "LUPIN Position 2", "time_boundary": None,    "color": "#e377c2"}  # From 10:30 to end of log (Pink)
         ]
         
         df_lupin = load_lupin_data("LUPIN_data/20250701")
