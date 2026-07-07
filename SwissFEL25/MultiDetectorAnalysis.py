@@ -55,6 +55,30 @@ def load_wendi_data(filepath):
     
     return df_wendi.sort_values('datetime')
 
+def load_nausicaa_data(file_list):
+    """
+    Loads and concatenates multiple NAUSICAA detector logs.
+    Handles LabVIEW timestamps and time zone conversions.
+    """
+    df_list = []
+
+    # Iterate through the provided file paths
+    for filepath in file_list:
+        df_temp = pd.read_csv(filepath, sep='\t')
+        df_list.append(df_temp)
+
+    # Concatenate all dataframes sequentially
+    df_nausicaa = pd.concat(df_list, ignore_index=True)
+
+    # Convert LabVIEW timestamp (seconds since 1904-01-01) to datetime
+    df_nausicaa['datetime'] = pd.to_datetime(df_nausicaa['Seconds'], unit='s', origin='1904-01-01')
+
+    # Localize to UTC (LabVIEW log baseline) and convert to Europe/Zurich
+    df_nausicaa['datetime'] = df_nausicaa['datetime'].dt.tz_localize('UTC').dt.tz_convert('Europe/Zurich')
+    df_nausicaa['datetime'] = df_nausicaa['datetime'].dt.as_unit('us')
+
+    # Sort chronologically to ensure seamless transition between files
+    return df_nausicaa.sort_values('datetime')
 
 def load_lupin_data(filepath):
     """
