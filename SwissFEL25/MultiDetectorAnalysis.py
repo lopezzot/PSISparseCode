@@ -36,7 +36,6 @@ def load_machine_diagnostics(timestamp_path, charge_path, freq_path):
     
     return df
 
-
 def load_wendi_data(filepath):
     """
     Loads and parses WENDI passive neutron detector logs.
@@ -61,22 +60,22 @@ def load_nausicaa_data(file_list):
     Handles LabVIEW timestamps and time zone conversions.
     """
     df_list = []
-
+    
     # Iterate through the provided file paths
     for filepath in file_list:
         df_temp = pd.read_csv(filepath, sep='\t')
         df_list.append(df_temp)
-
+        
     # Concatenate all dataframes sequentially
     df_nausicaa = pd.concat(df_list, ignore_index=True)
-
+    
     # Convert LabVIEW timestamp (seconds since 1904-01-01) to datetime
     df_nausicaa['datetime'] = pd.to_datetime(df_nausicaa['Seconds'], unit='s', origin='1904-01-01')
-
+    
     # Localize to UTC (LabVIEW log baseline) and convert to Europe/Zurich
     df_nausicaa['datetime'] = df_nausicaa['datetime'].dt.tz_localize('UTC').dt.tz_convert('Europe/Zurich')
     df_nausicaa['datetime'] = df_nausicaa['datetime'].dt.as_unit('us')
-
+    
     # Sort chronologically to ensure seamless transition between files
     return df_nausicaa.sort_values('datetime')
 
@@ -99,7 +98,6 @@ def load_lupin_data(filepath):
     df_lupin = df_lupin[df_lupin['datetime'].dt.hour >= 7]
     
     return df_lupin.sort_values('datetime')
-
 
 # =============================================================================
 # --- 2. GENERIC PLOTTING & ANALYSIS ENGINE ---
@@ -332,3 +330,31 @@ if __name__ == "__main__":
         )
     except Exception as e:
         print(f"[-] Failed to process LUPIN data: {e}")
+
+    # -------------------------------------------------------------------------
+    # RUN NAUSICAA PIPELINE
+    # -------------------------------------------------------------------------
+    print("\n[*] Processing NAUSICAA detector...")
+    try:
+        # Define the list of files to merge
+        nausicaa_files = [
+            "NAUSICAA_data/20250630",
+            "NAUSICAA_data/20250701"
+        ]
+
+        df_nausicaa = load_nausicaa_data(nausicaa_files)
+
+        # Filter NAUSICAA times from 07:00 of 1 July 2025
+        df_nausicaa = df_nausicaa[(df_nausicaa['datetime'].dt.day == 1) & (df_nausicaa['datetime'].dt.hour >= 7)]
+
+        analyze_and_plot_detector(
+            df_det=df_nausicaa,
+            df_mach=df_machine,
+            detector_name="Nausicaa",
+            dose_col="Dose rate (uSv/h)",
+            threshold=10.0,      # Adapt threshold to NAUSICAA background
+            ylim_plot=(-5, 1100),# Adapt plot scale to NAUSICAA peaks
+            splits=None          # Add splits here if you moved this detector too
+        )
+    except Exception as e:
+        print(f"[-] Failed to process NAUSICAA data: {e}")
