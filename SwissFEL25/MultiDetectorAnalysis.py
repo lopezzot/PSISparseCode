@@ -242,7 +242,7 @@ def analyze_and_plot_detector(df_det, df_mach, detector_name, dose_col, threshol
                     print(f"    Baseline ({baseline_range[0]}-{baseline_range[1]})               : {baseline_value:.3f} µSv/h")
                     # Assuming negligible error on the baseline, using active beam SEM only
                     print(f"    Net Mean Dose Rate (Mean-Baseline)  : {net_dose:.3f} ± {sem_dose:.3f} µSv/h (SEM)")
-                # -------------------------------------------------       
+                # -------------------------------------------------        
                 
                 print(f"    Median Dose Rate (Robust Peak)      : {median_dose:.3f} µSv/h")
                 print(f"    Data Standard Deviation (σ)         : {std_dose:.3f} µSv/h")
@@ -336,6 +336,12 @@ if __name__ == "__main__":
     # -------------------------------------------------------------------------
     print("\n[*] Processing NAUSICAA detector...")
     try:
+        # Define sequential experimental configurations for NAUSICAA
+        nausicaa_position_splits = [
+            {"name": "NAUSICAA Position 1", "time_boundary": "10:30", "color": "#ff7f0e"}, # From 07:00 up to 10:30 (Orange)
+            {"name": "NAUSICAA Position 2", "time_boundary": None,    "color": "#d62728"}  # From 10:30 to end of log (Red)
+        ]
+
         # Define the list of files to merge
         nausicaa_files = [
             "NAUSICAA_data/20250630",
@@ -354,7 +360,7 @@ if __name__ == "__main__":
             dose_col="Dose rate (uSv/h)",
             threshold=10.0,      # Adapt threshold to NAUSICAA background
             ylim_plot=(-5, 1100),# Adapt plot scale to NAUSICAA peaks
-            splits=None          # Add splits here if you moved this detector too
+            splits=nausicaa_position_splits  # Applied the position split configurations here
         )
     except Exception as e:
         print(f"[-] Failed to process NAUSICAA data: {e}")
