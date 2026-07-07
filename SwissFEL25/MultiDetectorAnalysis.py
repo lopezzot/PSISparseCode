@@ -36,7 +36,6 @@ def load_machine_diagnostics(timestamp_path, charge_path, freq_path):
     
     return df
 
-
 def load_wendi_data(filepath):
     """
     Loads and parses WENDI passive neutron detector logs.
@@ -55,6 +54,30 @@ def load_wendi_data(filepath):
     
     return df_wendi.sort_values('datetime')
 
+def load_nausicaa_data(file_list):
+    """
+    Loads and concatenates multiple NAUSICAA detector logs.
+    Handles LabVIEW timestamps and time zone conversions.
+    """
+    df_list = []
+    
+    # Iterate through the provided file paths
+    for filepath in file_list:
+        df_temp = pd.read_csv(filepath, sep='\t')
+        df_list.append(df_temp)
+        
+    # Concatenate all dataframes sequentially
+    df_nausicaa = pd.concat(df_list, ignore_index=True)
+    
+    # Convert LabVIEW timestamp (seconds since 1904-01-01) to datetime
+    df_nausicaa['datetime'] = pd.to_datetime(df_nausicaa['Seconds'], unit='s', origin='1904-01-01')
+    
+    # Localize to UTC (LabVIEW log baseline) and convert to Europe/Zurich
+    df_nausicaa['datetime'] = df_nausicaa['datetime'].dt.tz_localize('UTC').dt.tz_convert('Europe/Zurich')
+    df_nausicaa['datetime'] = df_nausicaa['datetime'].dt.as_unit('us')
+    
+    # Sort chronologically to ensure seamless transition between files
+    return df_nausicaa.sort_values('datetime')
 
 def load_lupin_data(filepath):
     """
@@ -75,7 +98,6 @@ def load_lupin_data(filepath):
     df_lupin = df_lupin[df_lupin['datetime'].dt.hour >= 7]
     
     return df_lupin.sort_values('datetime')
-
 
 # =============================================================================
 # --- 2. GENERIC PLOTTING & ANALYSIS ENGINE ---
@@ -168,9 +190,10 @@ def analyze_and_plot_detector(df_det, df_mach, detector_name, dose_col, threshol
     # -------------------------------------------------------------------------
     # PART B: Dataset Synchronization & Stability Filtering
     # -------------------------------------------------------------------------
+    # MODIFIED: Added 'charge_pC' to the df_mach column selection so it's available for filtering
     df_analysis = pd.merge_asof(
         df_det,
-        df_mach[['datetime', 'frequency_Hz', 'prev_freq_1', 'prev_freq_2', 'next_freq_1', 'next_freq_2']],
+        df_mach[['datetime', 'frequency_Hz', 'charge_pC', 'prev_freq_1', 'prev_freq_2', 'next_freq_1', 'next_freq_2']],
         on='datetime',
         direction='nearest'
     )
@@ -196,8 +219,9 @@ def analyze_and_plot_detector(df_det, df_mach, detector_name, dose_col, threshol
             
             total_stable_intervals = time_mask.sum()
             
-            # Active mask: combining time stability with the specific dose threshold to remove beam drops
-            active_mask = time_mask & (dataframe_selection[dose_col] > threshold)
+            # MODIFIED: Active mask now explicitly requires a non-null bunch charge (> 190 pC) 
+            # to filter out machine drops/interlocks during a stable frequency regime.
+            active_mask = time_mask & (dataframe_selection[dose_col] > threshold) & (dataframe_selection['charge_pC'] > 190.0)
             dose_rates_active = dataframe_selection.loc[active_mask, dose_col]
             
             n_points = len(dose_rates_active)
@@ -218,9 +242,8 @@ def analyze_and_plot_detector(df_det, df_mach, detector_name, dose_col, threshol
                 if baseline_range is not None and baseline_value > 0:
                     net_dose = mean_dose - baseline_value
                     print(f"    Baseline ({baseline_range[0]}-{baseline_range[1]})               : {baseline_value:.3f} µSv/h")
-                    # Assuming negligible error on the baseline, using active beam SEM only
                     print(f"    Net Mean Dose Rate (Mean-Baseline)  : {net_dose:.3f} ± {sem_dose:.3f} µSv/h (SEM)")
-                # -------------------------------------------------       
+                # -------------------------------------------------        
                 
                 print(f"    Median Dose Rate (Robust Peak)      : {median_dose:.3f} µSv/h")
                 print(f"    Data Standard Deviation (σ)         : {std_dose:.3f} µSv/h")
@@ -290,10 +313,9 @@ if __name__ == "__main__":
     # -------------------------------------------------------------------------
     print("\n[*] Processing LUPIN detector...")
     try:
-        # Define sequential experimental configurations for LUPIN
         lupin_position_splits = [
-            {"name": "LUPIN Position 1", "time_boundary": "10:30", "color": "#9467bd"}, # From 07:00 up to 10:30 (Purple)
-            {"name": "LUPIN Position 2", "time_boundary": None,    "color": "#e377c2"}  # From 10:30 to end of log (Pink)
+            {"name": "LUPIN Position 1", "time_boundary": "10:30", "color": "#9467bd"},
+            {"name": "LUPIN Position 2", "time_boundary": None,    "color": "#e377c2"}
         ]
         
         df_lupin = load_lupin_data("LUPIN_data/20250701")
@@ -302,9 +324,41 @@ if __name__ == "__main__":
             df_mach=df_machine, 
             detector_name="Lupin", 
             dose_col="Dose rate (uSv/h)", 
-            threshold=25.0,     # Higher threshold due to LUPIN background baseline
-            ylim_plot=(-5, 650), # Custom Y-limit to prevent squashing LUPIN plots
+            threshold=25.0,
+            ylim_plot=(-5, 650),
             splits=lupin_position_splits
         )
     except Exception as e:
         print(f"[-] Failed to process LUPIN data: {e}")
+
+    # -------------------------------------------------------------------------
+    # RUN NAUSICAA PIPELINE
+    # -------------------------------------------------------------------------
+    print("\n[*] Processing NAUSICAA detector...")
+    try:
+        nausicaa_position_splits = [
+            {"name": "NAUSICAA Position 1", "time_boundary": "10:30", "color": "#ff7f0e"},
+            {"name": "NAUSICAA Position 2", "time_boundary": None,    "color": "#d62728"}
+        ]
+
+        nausicaa_files = [
+            "NAUSICAA_data/20250630",
+            "NAUSICAA_data/20250701"
+        ]
+
+        df_nausicaa = load_nausicaa_data(nausicaa_files)
+
+        # Filter NAUSICAA times from 07:00 of 1 July 2025
+        df_nausicaa = df_nausicaa[(df_nausicaa['datetime'].dt.day == 1) & (df_nausicaa['datetime'].dt.hour >= 7)]
+
+        analyze_and_plot_detector(
+            df_det=df_nausicaa,
+            df_mach=df_machine,
+            detector_name="Nausicaa",
+            dose_col="Dose rate (uSv/h)",
+            threshold=10.0,
+            ylim_plot=(-5, 1100),
+            splits=nausicaa_position_splits
+        )
+    except Exception as e:
+        print(f"[-] Failed to process NAUSICAA data: {e}")
