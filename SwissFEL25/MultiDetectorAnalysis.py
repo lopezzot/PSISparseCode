@@ -99,6 +99,30 @@ def load_lupin_data(filepath):
     
     return df_lupin.sort_values('datetime')
 
+def load_drps_data(folder_path):
+    """
+    Loads DRPS detector data from a directory containing start.txt and average.txt.
+    Matches the SwissFEL archiver data structure.
+    """
+    start_path = os.path.join(folder_path, "start.txt")
+    avg_path = os.path.join(folder_path, "average.txt")
+
+    # Load timestamps (ms) and corresponding average dose rate values
+    timestamps = np.loadtxt(start_path, skiprows=1)
+    averages = np.loadtxt(avg_path, skiprows=1)
+
+    df = pd.DataFrame({
+        'timestamp_ms': timestamps,
+        'dose_rate': averages
+    })
+
+    # Convert Unix timestamps (ms) to local datetime (Europe/Zurich)
+    df['datetime'] = pd.to_datetime(df['timestamp_ms'], unit='ms', utc=True)
+    df['datetime'] = df['datetime'].dt.tz_convert('Europe/Zurich')
+    df['datetime'] = df['datetime'].dt.as_unit('us')
+
+    return df.sort_values('datetime')
+
 # =============================================================================
 # --- 2. GENERIC PLOTTING & ANALYSIS ENGINE ---
 # =============================================================================
@@ -362,3 +386,42 @@ if __name__ == "__main__":
         )
     except Exception as e:
         print(f"[-] Failed to process NAUSICAA data: {e}")
+
+    # -------------------------------------------------------------------------
+    # RUN DRPS 376m PIPELINE
+    # -------------------------------------------------------------------------
+    print("\n[*] Processing DRPS 376m detector...")
+    try:
+        df_drps_376 = load_drps_data("DRPS_data/DRPS_376m")
+        analyze_and_plot_detector(
+            df_det=df_drps_376,
+            df_mach=df_machine,
+            detector_name="DRPS_376m",
+            dose_col="dose_rate",
+            threshold=10.0,
+            ylim_plot=(-5, 70),
+            splits=None,
+            baseline_range=("12:00","13:00")
+        )
+    except Exception as e:
+        print(f"[-] Failed to process DRPS 376m data: {e}")
+
+    # -------------------------------------------------------------------------
+    # RUN DRPS 387m PIPELINE
+    # -------------------------------------------------------------------------
+    print("\n[*] Processing DRPS 387m detector...")
+    try:
+        # Assuming the folder for the second detector follows the same naming convention
+        df_drps_387 = load_drps_data("DRPS_data/DRPS_387m")
+        analyze_and_plot_detector(
+            df_det=df_drps_387,
+            df_mach=df_machine,
+            detector_name="DRPS_387m",
+            dose_col="dose_rate",
+            threshold=10.0,
+            ylim_plot=(-5, 300),
+            splits=None,
+            baseline_range=("12:00","13:00")
+        )
+    except Exception as e:
+        print(f"[-] Failed to process DRPS 387m data: {e}")
