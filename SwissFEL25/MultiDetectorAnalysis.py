@@ -1,6 +1,8 @@
 import os
 import numpy as np
 import pandas as pd
+import matplotlib
+matplotlib.use('Agg') # Force matplotlib to use a non-interactive backend
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
@@ -150,8 +152,9 @@ def analyze_and_plot_detector(df_det, df_mach, detector_name, dose_col, threshol
     # -------------------------------------------------------------------------
     # PART A: Synchronized 3-Panel Plotting
     # -------------------------------------------------------------------------
-    fig, (ax1, ax2, ax3) = plt.subplots(3, 1, sharex=True, figsize=(10, 11), dpi=150)
+    # Set the style globally BEFORE creating the subplots to keep the light grey borders
     plt.style.use('seaborn-v0_8-whitegrid' if 'seaborn-v0_8-whitegrid' in plt.style.available else 'default')
+    fig, (ax1, ax2, ax3) = plt.subplots(3, 1, sharex=True, figsize=(10, 11), dpi=150)
 
     # 1. Top Subplot: Beam Charge (from machine dataframe)
     ax1.plot(df_mach['datetime'], df_mach['charge_pC'], color='#1f77b4', linewidth=1.5, label='Beam Charge')
@@ -209,7 +212,7 @@ def analyze_and_plot_detector(df_det, df_mach, detector_name, dose_col, threshol
     output_filename = os.path.join(output_dir, f"swissfel_diagnostics_and_{detector_name.lower()}.png")
     # -----------------------------------------------
     plt.savefig(output_filename, dpi=300)
-    plt.show()
+    plt.close(fig)
 
     # -------------------------------------------------------------------------
     # PART B: Dataset Synchronization & Stability Filtering
