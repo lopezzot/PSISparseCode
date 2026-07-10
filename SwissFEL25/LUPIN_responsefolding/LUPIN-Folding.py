@@ -32,7 +32,9 @@ fluence = dN_dE * dE # to get the fluence (neutrons/cm^2) I have to multiply my 
 
 E_center = np.sqrt(E_min * E_max) # the geometric mean for log-scaled bin centers
 
-lethargy = dN_dE * (E_center/1000) # the lethargy 
+# The lethargy (E * dN/dE)
+# Both E_center and the denominator of dN_dE are in MeV
+lethargy = dN_dE * (E_center) # the lethargy 
 
 fig, ax1 = plt.subplots(figsize=(10, 6))
 
@@ -64,6 +66,12 @@ ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper right')
 plt.title('Neutron Fluence and Lethargy vs Energy (2025)', fontsize=13, pad=10)
 plt.tight_layout()
 plt.savefig('neutron_fluence_plot_pos5.png', dpi=300)
+
+# This is the fluence to H*(10) convertion function in pSVcm2, energy bins in MeV
+# Numbers are taken from "MCNPX SIMULATIONS OF THE RESPONSE OF THE EXTENDED-RANGE REM METER WENDI-2", DOI:10.2298/NTRP140SS25S
+energy_fluence_to_H10_function = [9.492218410280988e-9, 7.79370003310337e-8, 1.8450523636359488e-7, 6.391572541760222e-7, 0.000001196590178695872, 0.0000027823102149957592, 0.000005307285683717842, 0.000010231106652003436, 0.000023278138167773893, 0.000042483917203395035, 0.00008076191527801742, 0.00018928383651851429, 0.0003635068849352923, 0.0006903189177272841, 0.0015915557824633265, 0.002983585657778197, 0.005645429347979109, 0.012824224181601233, 0.02477975812960878, 0.04713481248081918, 0.06763915344644195, 0.11162795508530567, 0.14910430495168958, 0.2021168295695759, 0.2825530174737817, 0.3761227679543664, 0.5621630080012422, 0.8581092921177734, 1.193311490116029, 1.9315797200635523, 3.0635427165248004, 5.924792950263549, 10.620032233831877, 15.879348937441032, 25.5432651555736, 37.24580147079381, 60.24223934384477, 92.0448653985943, 117.69899660418108, 169.5378901352275, 315.4687877287317, 401.7072772240769, 484.8280013467348, 592.2872514265484, 775.1935095763772, 938.3016521377199, 1371.130530716348, 1805.7079793741932, 2623.723141019056, 4015.405527485102]
+
+fluence_to_H10_function = [6.466250424686161, 8.799679730059975, 10.311071254352676, 12.550073554335057, 13.110995769306358, 13.04732071640402, 12.938089587841061, 12.36783915759269, 11.533934092774762, 10.919057066048893, 10.306481384258957, 9.570783817289552, 9.149872743451809, 8.556373881792219, 8.014033284880584, 7.680080716074246, 7.548324338039095, 7.711408181310479, 10.092721735729185, 15.751225781458523, 22.92952436337824, 39.43955380203264, 58.34955046204815, 85.68835482460437, 129.1868168874242, 168.6254770987624, 231.96883530095405, 318.4074658501491, 370.05932308196606, 419.7154323430968, 416.52189589866686, 404.15489820942605, 400.77134563145006, 470.27585035359493, 592.2088584676992, 515.0339239286063, 405.1138282879553, 319.4097514591874, 283.28833951915, 242.9008838853542, 303.56107190068565, 343.66199531090075, 413.0752985273366, 478.6141706126125, 562.9223957316359, 651.3011760820857, 723.0153836888301, 790.8497596100315, 854.9824782620643, 935.9175337863275]
 
 # LUPIN incident neutron energy values in MeV
 # Data from "Experimental characterization of the LUPIN Rem counter in monoenergetic neutron fields"
@@ -128,3 +136,139 @@ lupin_ratio_response = np.array([
     0.7624849207027067, 0.6820925516030660, 0.7191230350418380,
     0.7105233980818508
 ])
+
+from scipy.interpolate import interp1d
+
+# ==============================================================================
+# DATA PREPARATION & INTERPOLATION
+# ==============================================================================
+# Convert lists to numpy arrays for interpolation routines
+icru_energies = np.array(energy_fluence_to_H10_function)
+icru_factors = np.array(fluence_to_H10_function)
+
+# Interpolate ICRU conversion factors.
+# Using log-log interpolation because both energy and conversion factors
+# span multiple orders of magnitude. For energies outside the ICRU vector bounds
+# (e.g., above 4 GeV or below 9.5e-9 MeV), we hold the edge values constant.
+interp_icru_log = interp1d(
+    np.log10(icru_energies),
+    np.log10(icru_factors),
+    kind='linear',
+    bounds_error=False,
+    fill_value=(np.log10(icru_factors[0]), np.log10(icru_factors[-1]))
+)
+
+# Wrapper to safely convert back from log space
+def get_icru_factor(e):
+    return 10**(interp_icru_log(np.log10(e)))
+
+# Interpolate LUPIN ratio response.
+# Using log-linear interpolation because the ratio fluctuates linearly around 1,
+# but the X-axis (energy) spans decades. Edge values are held constant for extrapolations.
+interp_lupin_ratio = interp1d(
+    np.log10(lupin_energies_MeV),
+    lupin_ratio_response,
+    kind='linear',
+    bounds_error=False,
+    fill_value=(lupin_ratio_response[0], lupin_ratio_response[-1])
+)
+
+def get_lupin_ratio(e):
+    return interp_lupin_ratio(np.log10(e))
+
+# ==============================================================================
+# DOSE AND CORRECTION FACTOR CALCULATION
+# ==============================================================================
+# Evaluate reference data at the simulated FLUKA bin centers (E_center)
+icru_at_sim_energies = get_icru_factor(E_center)
+lupin_ratio_at_sim_energies = get_lupin_ratio(E_center)
+
+# Calculate the "True" ambient dose equivalent H*(10) per bin (in pSv)
+# Formula: Fluence (cm^-2) * Conversion Factor (pSv * cm^2)
+true_dose_per_bin = fluence * icru_at_sim_energies
+total_true_dose = np.sum(true_dose_per_bin)
+
+# Calculate the LUPIN estimated ambient dose equivalent H*(10) per bin (in pSv)
+# Formula: True Dose per bin * LUPIN Response Ratio
+lupin_dose_per_bin = true_dose_per_bin * lupin_ratio_at_sim_energies
+total_lupin_dose = np.sum(lupin_dose_per_bin)
+
+# Calculate the final correction factor for the LUPIN detector
+# If LUPIN overestimates the dose, C < 1. If it underestimates, C > 1.
+lupin_correction_factor = total_true_dose / total_lupin_dose
+
+# ==============================================================================
+# OUTPUT RESULTS
+# ==============================================================================
+print("-" * 50)
+print(f"Total True H*(10) Dose:  {total_true_dose:.4e} pSv")
+print(f"Total LUPIN H*(10) Dose: {total_lupin_dose:.4e} pSv")
+print(f"LUPIN Correction Factor: {lupin_correction_factor:.4f}")
+print("-" * 50)
+
+# ==============================================================================
+# PLOTTING CONFIGURATION (Toggle mask on/off)
+# ==============================================================================
+use_lupin_mask = False  # Set to False to disable masking and show full extrapolation
+
+if use_lupin_mask:
+    # Restrict arrays strictly to the original LUPIN energy bounds
+    lupin_plot_mask = (E_center >= lupin_energies_MeV.min()) & (E_center <= lupin_energies_MeV.max())
+    plot_E = E_center[lupin_plot_mask]
+    plot_ratio = lupin_ratio_at_sim_energies[lupin_plot_mask]
+else:
+    # Use full simulation spectrum arrays (including flat extrapolations)
+    plot_E = E_center
+    plot_ratio = lupin_ratio_at_sim_energies
+
+# --- Plot 1: LUPIN Response Ratio vs Energy (Log-Log) ---
+fig, ax = plt.subplots(figsize=(10, 5))
+
+# Arrays adapt dynamically based on the use_lupin_mask flag
+ax.plot(plot_E, plot_ratio, color='darkviolet', marker='.', linestyle='-', linewidth=1.5, label='LUPIN Response Ratio')
+
+ax.set_xscale('log')
+ax.set_yscale('log')
+ax.set_xlabel('Energy (MeV)', fontsize=11)
+ax.set_ylabel('Response Ratio (Response / ICRU Factor)', fontsize=11)
+ax.grid(True, which="both", linestyle="--", alpha=0.5)
+ax.axhline(1.0, color='gray', linestyle=':', alpha=0.7, label='Ideal Response (1.0)')
+
+# Enforce view limits only if the mask is enabled
+if use_lupin_mask:
+    ax.set_xlim(lupin_energies_MeV.min(), lupin_energies_MeV.max())
+
+ax.legend(loc='upper right')
+plt.title('LUPIN Detector Response Ratio vs Incident Neutron Energy', fontsize=13, pad=10)
+plt.tight_layout()
+plt.savefig('lupin_response_ratio_only.png', dpi=300)
+plt.close()
+
+# --- Plot 2: Vertical Subplots ---
+fig, (ax_top, ax_bot) = plt.subplots(2, 1, figsize=(10, 8), sharex=True)
+
+# Top Subplot: Full Neutron Fluence from FLUKA (always full range)
+ax_top.plot(E_center, fluence, color='blue', marker='.', linestyle='-', linewidth=1.5, label='Neutron Fluence')
+ax_top.set_yscale('log')
+ax_top.set_ylabel('Fluence (particles/cm$^2$)', fontsize=11)
+ax_top.grid(True, which="both", linestyle="--", alpha=0.5)
+ax_top.set_title('Neutron Spectrum Fluence vs LUPIN Response Curve Comparison', fontsize=13, pad=10)
+ax_top.legend(loc='upper right')
+
+# Bottom Subplot: Interpolated LUPIN Response Ratio (dynamic range)
+ax_bot.plot(plot_E, plot_ratio, color='darkviolet', marker='.', linestyle='-', linewidth=1.5, label='LUPIN Response Ratio')
+ax_bot.set_xscale('log')
+ax_bot.set_yscale('log')
+ax_bot.set_xlabel('Energy (MeV)', fontsize=11)
+ax_bot.set_ylabel('Response Ratio', fontsize=11)
+ax_bot.axhline(1.0, color='gray', linestyle=':', alpha=0.7)
+ax_bot.grid(True, which="both", linestyle="--", alpha=0.5)
+ax_bot.legend(loc='upper right')
+
+# Align the shared X-axis limits to the LUPIN definition range if masked
+if use_lupin_mask:
+    ax_bot.set_xlim(lupin_energies_MeV.min(), lupin_energies_MeV.max())
+
+plt.tight_layout()
+plt.savefig('neutron_fluence_and_lupin_ratio_stacked.png', dpi=300)
+plt.close()
