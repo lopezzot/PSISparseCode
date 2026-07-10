@@ -13,6 +13,7 @@ raw_x = np.array([
 ])
 
 # --- NAUSICAA Relative Response (Y-axis) with negative values clamped to 0.0 ---
+# These data come from ELSE Nuclear plot in a presentation for the SwissFEL 2025 measurement campaign
 nausicaa_response = np.array([
     0.014057172471721389, 0.0008760844033367438, 0.0, 0.0,
     0.010841828934280302, 0.3432032205772884, 2.2689664451140232, 8.613057127814173,
