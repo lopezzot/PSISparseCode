@@ -7,3 +7,4 @@ It shows fluences, conversion functions from fluences to H*(10) and detector rel
 - [WENDI_data](WENDI_data): Data for the WENDI-2 detector during 2025 data taking.
 - [LUPIN_data](LUPIN_data): Data for the LUPIN detector during 2025 data taking.
 - [MultiDetectorAnalysis.py](MultiDetectorAnalysis.py): Python code for the analysis at 10 and 25 Hz of the detectors used during the 2025 data taking.
+- [MultiDetectorResults](MultiDetectorResults): Directory containing plots created by the MultiDetectorAnalysis code.
