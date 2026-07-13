@@ -134,15 +134,30 @@ plt.show()
 
 # Source Data 1: ICRP 74 Fluence-to-H*(10) for photons (ends at 10 MeV) ---
 # Higher energies extension from Pelliccioni
+#icru_energy_mev = np.array([
+#    0.01, 0.015, 0.020, 0.030, 0.040, 0.050, 0.060, 0.080, 0.100, 0.150, 0.200, 0.300, 0.400, 0.500, 0.600, 0.800, 1, 1.5, 2, 3, 4, 5, 6, 8, 10,
+#    20.0, 30.0, 40.0, 50.0, 60.0, 80.0, 100.0
+#])
 icru_energy_mev = np.array([
-    0.01, 0.015, 0.020, 0.030, 0.040, 0.050, 0.060, 0.080, 0.100, 0.150, 0.200, 0.300, 0.400, 0.500, 0.600, 0.800, 1, 1.5, 2, 3, 4, 5, 6, 8, 10,
-    20.0, 30.0, 40.0, 50.0, 60.0, 80.0, 100.0
+    0.01, 0.015, 0.02, 0.03, 0.04, 0.05, 0.06, 0.08, 0.1, 0.15,
+    0.2, 0.3, 0.4, 0.5, 0.6, 0.8, 1.0, 1.5, 2.0, 3.0, 4.0, 5.0,
+    6.0, 8.0, 10.0, 20.0, 30.0, 40.0, 50.0, 100.0, 200.0, 500.0,
+    1000.0, 2000.0, 5000.0, 10000.0
 ])
 
+#icru_h10_psv_cm2 = np.array([
+#    0.061, 0.83, 1.05, 0.81, 0.64, 0.55, 0.51, 0.53, 0.61, 0.89, 1.20, 1.80, 2.38, 2.93, 3.44, 4.38, 5.2, 6.9, 8.6, 11.1, 13.4, 15.5, 17.6, 21.6, 25.6,
+#    27.5, 30.4, 32.2, 33.6, 34.6, 35.8, 36.8
+#])
 icru_h10_psv_cm2 = np.array([
-    0.061, 0.83, 1.05, 0.81, 0.64, 0.55, 0.51, 0.53, 0.61, 0.89, 1.20, 1.80, 2.38, 2.93, 3.44, 4.38, 5.2, 6.9, 8.6, 11.1, 13.4, 15.5, 17.6, 21.6, 25.6,
-    27.5, 30.4, 32.2, 33.6, 34.6, 35.8, 36.8
-])
+    8.33e-14, 8.52e-13, 1.05e-12, 0.80e-12, 0.62e-12, 0.52e-12, 0.51e-12,
+    0.56e-12, 0.62e-12, 0.87e-12, 1.23e-12, 1.81e-12, 2.36e-12, 2.78e-12,
+    3.46e-12, 4.29e-12, 5.18e-12, 6.92e-12, 8.25e-12, 1.04e-11, 1.07e-11,
+    1.04e-11, 9.58e-12, 9.10e-12, 8.76e-12, 8.29e-12, 8.23e-12, 8.26e-12,
+    8.64e-12, 9.00e-12, 1.02e-11, 1.18e-11, 1.17e-11, 1.15e-11, 1.33e-11,
+    1.22e-11
+]) # this is in Sv
+icru_h10_psv_cm2 = icru_h10_psv_cm2 * 1e12 # now in pSv
 
 # Log-log interpolation of ICRU conversion coefficients to match FLUKA bin centers
 # Using log10 for both axes is standard for dosimetric data interpolation
@@ -213,4 +228,44 @@ ax_bot.set_ylim(-0.5, 12.0)
 
 # Remove plt.tight_layout() as constrained_layout handles it now
 plt.savefig('nausicaa_response_fluence_stacked.png', dpi=300)
+plt.show()
+
+# ==============================================================================
+# --- PLOTTING: FLUKA FLUENCE + NAUSICAA RESPONSE + ICRU COEFFICIENTS ---
+# ==============================================================================
+
+# Create 3 subplots: Fluence (top), Response (mid), ICRU Conversion (bot)
+fig, (ax_top, ax_mid, ax_bot) = plt.subplots(3, 1, figsize=(10, 11), sharex=True, constrained_layout=True)
+
+# 1. Top Subplot: Particle Fluence from FLUKA
+ax_top.plot(E_center, fluence, color='blue', marker='.', linestyle='-', linewidth=1.5, label='Photon Fluence')
+ax_top.set_yscale('log')
+ax_top.set_ylabel('Fluence (cm$^{-2}$)', fontsize=11)
+ax_top.grid(True, which="both", linestyle="--", alpha=0.5)
+ax_top.set_title('FLUKA Photon Fluence, NAUSICAA Response, and ICRU Coefficients', fontsize=13, pad=10)
+ax_top.legend(loc='upper right')
+
+# 2. Middle Subplot: NAUSICAA Response
+plot_mask = (nausicaa_energy_mev >= E_center.min()) & (nausicaa_energy_mev <= E_center.max())
+ax_mid.plot(nausicaa_energy_mev[plot_mask], nausicaa_response[plot_mask], color='darkorange', marker='o', linestyle='-', linewidth=1.5, label='NAUSICAA Response')
+ax_mid.axhline(1.0, color='gray', linestyle=':', alpha=0.7, label='Reference (1.0)')
+ax_mid.set_xscale('log')
+ax_mid.set_yscale('linear')
+ax_mid.set_ylabel('Relative Response', fontsize=11)
+ax_mid.grid(True, which="both", linestyle="--", alpha=0.5)
+ax_mid.legend(loc='upper right')
+
+# 3. Bottom Subplot: ICRU Conversion Coefficients
+ax_bot.plot(icru_energy_mev, icru_h10_psv_cm2, color='green', marker='s', linestyle='-', linewidth=1.5, label='H*(10)/$\Phi$ Conversion')
+ax_bot.set_xscale('log')
+ax_bot.set_yscale('log') # Log scale is necessary here as values span multiple orders of magnitude
+ax_bot.set_xlabel('Energy (MeV)', fontsize=11)
+ax_bot.set_ylabel('H*(10)/$\Phi$ (pSv cm$^2$)', fontsize=11)
+ax_bot.grid(True, which="both", linestyle="--", alpha=0.5)
+ax_bot.legend(loc='lower right')
+
+# Set consistent X-axis limits for all plots
+ax_bot.set_xlim(E_center.min(), E_center.max())
+
+plt.savefig('photon_fluence_response_icru_stacked.png', dpi=300)
 plt.show()
