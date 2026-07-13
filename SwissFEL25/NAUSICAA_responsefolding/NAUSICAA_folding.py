@@ -131,3 +131,86 @@ ax.legend(loc='upper right', frameon=True, facecolor='#f7f7f7')
 plt.tight_layout()
 plt.savefig('nausicaa_fixed_response_plot.png', dpi=300)
 plt.show()
+
+# Source Data 1: ICRP 74 Fluence-to-H*(10) for photons (ends at 10 MeV) ---
+# Higher energies extension from Pelliccioni
+icru_energy_mev = np.array([
+    0.01, 0.015, 0.020, 0.030, 0.040, 0.050, 0.060, 0.080, 0.100, 0.150, 0.200, 0.300, 0.400, 0.500, 0.600, 0.800, 1, 1.5, 2, 3, 4, 5, 6, 8, 10,
+    20.0, 30.0, 40.0, 50.0, 60.0, 80.0, 100.0
+])
+
+icru_h10_psv_cm2 = np.array([
+    0.061, 0.83, 1.05, 0.81, 0.64, 0.55, 0.51, 0.53, 0.61, 0.89, 1.20, 1.80, 2.38, 2.93, 3.44, 4.38, 5.2, 6.9, 8.6, 11.1, 13.4, 15.5, 17.6, 21.6, 25.6,
+    27.5, 30.4, 32.2, 33.6, 34.6, 35.8, 36.8
+])
+
+# Log-log interpolation of ICRU conversion coefficients to match FLUKA bin centers
+# Using log10 for both axes is standard for dosimetric data interpolation
+interpolated_h10 = 10**np.interp(
+    np.log10(E_center),
+    np.log10(icru_energy_mev),
+    np.log10(icru_h10_psv_cm2)
+)
+
+# Interpolate the NAUSICAA response over the FLUKA energy bin centers
+interpolated_response = np.interp(
+    np.log10(E_center),
+    np.log10(nausicaa_energy_mev),
+    nausicaa_response,
+    left=0.0,
+    right=nausicaa_response[-1]
+)
+
+# Calculate True Dose and Measured Dose (in pSv)
+# Dose = Fluence (cm^-2) * h10 (pSv * cm^2)
+true_dose_spectrum = fluence * interpolated_h10
+measured_dose_spectrum = true_dose_spectrum * interpolated_response
+
+total_true_dose = np.sum(true_dose_spectrum)
+total_measured_dose = np.sum(measured_dose_spectrum)
+
+# The correction factor is True Dose / Measured Dose
+correction_factor = total_true_dose / total_measured_dose
+
+print("\n==================================================")
+print(f"Total True H*(10) Dose: {total_true_dose:.3e} pSv")
+print(f"Total Measured NAUSICAA Dose: {total_measured_dose:.3e} pSv")
+print(f"CALCULATED DOSE CORRECTION FACTOR: {correction_factor:.3f}")
+print("==================================================")
+
+# ==============================================================================
+# --- PLOTTING: FLUKA FLUENCE + NAUSICAA RESPONSE (MASKED TO SPECTRUM RANGE) ---
+# ==============================================================================
+
+# Create a mask to filter NAUSICAA data so it only shows within the FLUKA spectrum range
+plot_mask = (nausicaa_energy_mev >= E_center.min()) & (nausicaa_energy_mev <= E_center.max())
+plot_nausicaa_E = nausicaa_energy_mev[plot_mask]
+plot_nausicaa_resp = nausicaa_response[plot_mask]
+fig, (ax_top, ax_bot) = plt.subplots(2, 1, figsize=(10, 8), sharex=True, constrained_layout=True)
+
+# Top Subplot: Particle Fluence from FLUKA
+ax_top.plot(E_center, fluence, color='blue', marker='.', linestyle='-', linewidth=1.5, label='Neutron Fluence')
+ax_top.set_yscale('log')
+ax_top.set_ylabel('Fluence (cm$^{-2}$)', fontsize=11)
+ax_top.grid(True, which="both", linestyle="--", alpha=0.5)
+ax_top.set_title(f'FLUKA Photon Fluence vs NAUSICAA Response Comparison', fontsize=13, pad=10)
+ax_top.legend(loc='upper right')
+
+# Bottom Subplot: NAUSICAA Response
+ax_bot.plot(plot_nausicaa_E, plot_nausicaa_resp, color='darkorange', marker='o', linestyle='-', linewidth=1.5, label='NAUSICAA Response')
+ax_bot.axhline(1.0, color='gray', linestyle=':', alpha=0.7, label='Reference (1.0)')
+
+ax_bot.set_xscale('log')
+ax_bot.set_yscale('linear')
+ax_bot.set_xlabel('Energy (MeV)', fontsize=11)
+ax_bot.set_ylabel('Relative Response', fontsize=11)
+ax_bot.grid(True, which="both", linestyle="--", alpha=0.5)
+ax_bot.legend(loc='upper right')
+
+# Ensure X-axis limits match the simulation exactly
+ax_bot.set_xlim(E_center.min(), E_center.max())
+ax_bot.set_ylim(-0.5, 12.0)
+
+# Remove plt.tight_layout() as constrained_layout handles it now
+plt.savefig('nausicaa_response_fluence_stacked.png', dpi=300)
+plt.show()
