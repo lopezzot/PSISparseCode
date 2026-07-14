@@ -129,7 +129,7 @@ def load_drps_data(folder_path):
 # --- 2. GENERIC PLOTTING & ANALYSIS ENGINE ---
 # =============================================================================
 
-def analyze_and_plot_detector(df_det, df_mach, detector_name, dose_col, threshold, ylim_plot=[-10, 500], splits=None, baseline_range=("07:00", "08:00")):
+def analyze_and_plot_detector(df_det, df_mach, detector_name, dose_col, threshold, ylim_plot=[-10, 500], splits=None, baseline_range=("07:00", "08:00"), correction_factor=None):
     """
     Synchronizes any detector with machine logs, generates a synchronized 3-panel plot (handling optional time splits),
     and calculates statistical dose rates for stable frequency plateaus independently per split.
@@ -270,10 +270,20 @@ def analyze_and_plot_detector(df_det, df_mach, detector_name, dose_col, threshol
                     net_dose = mean_dose - baseline_value
                     print(f"    Baseline ({baseline_range[0]}-{baseline_range[1]})               : {baseline_value:.3f} µSv/h")
                     print(f"    Net Mean Dose Rate (Mean-Baseline)  : {net_dose:.3f} ± {sem_dose:.3f} µSv/h (SEM)")
+
+                # Apply optional correction factor to the net dose
+                    if correction_factor is not None:
+                        corrected_net_dose = net_dose * correction_factor
+                        corrected_sem = sem_dose * correction_factor # Propagate error through a constant
+                        # Not colored in red
+                        #print(f"    Corrected Net Dose by sensitivity (x {correction_factor:.2f})         : {corrected_net_dose:.3f} ± {corrected_sem:.3f} µSv/h (SEM)")
+                        # Colored in red
+                        print(f"\033[31m    Corrected Net Dose by sensitivity (x {correction_factor:.2f})  : "
+      f"{corrected_net_dose:.3f} ± {corrected_sem:.3f} µSv/h (SEM)\033[0m")
                 # -------------------------------------------------        
                 
-                print(f"    Median Dose Rate (Robust Peak)      : {median_dose:.3f} µSv/h")
-                print(f"    Data Standard Deviation (σ)         : {std_dose:.3f} µSv/h")
+                #print(f"    Median Dose Rate (Robust Peak)      : {median_dose:.3f} µSv/h")
+                #print(f"    Data Standard Deviation (σ)         : {std_dose:.3f} µSv/h")
             else:
                 print(f"\n[-] Frequency Regime: {display_label}")
                 print(f"    No data points passed the active plateau criteria.")
@@ -330,7 +340,8 @@ if __name__ == "__main__":
             dose_col="val_ext", 
             threshold=20.0,
             ylim_plot=(-10, 500),
-            splits=None
+            splits=None,
+            correction_factor= 1.222
         )
     except Exception as e:
         print(f"[-] Failed to process WENDI data: {e}")
@@ -353,7 +364,8 @@ if __name__ == "__main__":
             dose_col="Dose rate (uSv/h)", 
             threshold=25.0,
             ylim_plot=(-5, 650),
-            splits=lupin_position_splits
+            splits=lupin_position_splits,
+            correction_factor=0.9745
         )
     except Exception as e:
         print(f"[-] Failed to process LUPIN data: {e}")
@@ -385,7 +397,8 @@ if __name__ == "__main__":
             dose_col="Dose rate (uSv/h)",
             threshold=10.0,
             ylim_plot=(-5, 1100),
-            splits=nausicaa_position_splits
+            splits=nausicaa_position_splits,
+            correction_factor=0.811
         )
     except Exception as e:
         print(f"[-] Failed to process NAUSICAA data: {e}")
