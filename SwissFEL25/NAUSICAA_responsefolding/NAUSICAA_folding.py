@@ -256,11 +256,11 @@ ax_mid.grid(True, which="both", linestyle="--", alpha=0.5)
 ax_mid.legend(loc='upper right')
 
 # 3. Bottom Subplot: ICRU Conversion Coefficients
-ax_bot.plot(icru_energy_mev, icru_h10_psv_cm2, color='green', marker='s', linestyle='-', linewidth=1.5, label='H*(10)/$\Phi$ Conversion')
+ax_bot.plot(icru_energy_mev, icru_h10_psv_cm2, color='green', marker='s', linestyle='-', linewidth=1.5, label=r'H*(10)/$\Phi$ Conversion')
 ax_bot.set_xscale('log')
 ax_bot.set_yscale('log') # Log scale is necessary here as values span multiple orders of magnitude
 ax_bot.set_xlabel('Energy (MeV)', fontsize=11)
-ax_bot.set_ylabel('H*(10)/$\Phi$ (pSv cm$^2$)', fontsize=11)
+ax_bot.set_ylabel(r'H*(10)/$\Phi$ (pSv cm$^2$)', fontsize=11)
 ax_bot.grid(True, which="both", linestyle="--", alpha=0.5)
 ax_bot.legend(loc='lower right')
 

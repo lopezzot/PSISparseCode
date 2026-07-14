@@ -278,7 +278,7 @@ def analyze_and_plot_detector(df_det, df_mach, detector_name, dose_col, threshol
                         # Not colored in red
                         #print(f"    Corrected Net Dose by sensitivity (x {correction_factor:.2f})         : {corrected_net_dose:.3f} ± {corrected_sem:.3f} µSv/h (SEM)")
                         # Colored in red
-                        print(f"\033[31m    Corrected Net Dose by sensitivity (x {correction_factor:.2f})         : "
+                        print(f"\033[31m    Corrected Net Dose by sensitivity (x {correction_factor:.2f})  : "
       f"{corrected_net_dose:.3f} ± {corrected_sem:.3f} µSv/h (SEM)\033[0m")
                 # -------------------------------------------------        
                 
