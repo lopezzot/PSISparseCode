@@ -142,7 +142,7 @@ else: # Photons
 
 E_min = np.array(active_flux_bin_min) # convert to numpy array
 E_max = np.array(active_flux_bin_max)
-dN_dE = np.array(active_fluence_diff)
+dN_dE = np.array(active_fluence_diff) / 1000 # GeV to MeV
 
 dE = E_max - E_min # the width of each energy bin
 
