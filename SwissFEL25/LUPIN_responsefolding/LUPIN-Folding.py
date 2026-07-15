@@ -132,6 +132,27 @@ icru_h10_psv_cm2 = icru_h10_sv_cm2 * 1e12
 energy_fluence_to_H10_function = icru_energy_mev
 fluence_to_H10_function = icru_h10_psv_cm2
 
+# --- Plot the Fluence-to-H*(10) Conversion Function ---
+plt.figure(figsize=(10, 5))
+
+# Plot the merged conversion function (ICRP 74 + Pelliccioni)
+plt.plot(energy_fluence_to_H10_function, fluence_to_H10_function,
+         color='forestgreen', marker='o', linestyle='-', linewidth=1.5, label='Merged ICRU H*(10)')
+
+# Highlight the transition point at 20 MeV
+plt.axvline(20.0, color='red', linestyle='--', alpha=0.7, label='Transition ICRP 74 / Pelliccioni (20 MeV)')
+
+plt.xscale('log')
+plt.yscale('log')
+plt.xlabel('Energy (MeV)', fontsize=11)
+plt.ylabel('H*(10) Conversion Factor (pSv cm^2)', fontsize=11)
+plt.grid(True, which="both", linestyle="--", alpha=0.5)
+plt.legend(loc='lower right')
+plt.title('Fluence-to-H*(10) Dose Conversion Function', fontsize=13, pad=10)
+plt.tight_layout()
+plt.savefig('fluence_to_H10_conversion_function.png', dpi=300)
+plt.close()
+
 # LUPIN incident neutron energy values in MeV
 # Data from "Experimental characterization of the LUPIN Rem counter in monoenergetic neutron fields"
 lupin_energies_MeV = np.array([
@@ -163,7 +184,6 @@ lupin_energies_MeV = np.array([
     334.96601983581530e+00, 448.24152919168785e+00, 674.67918864405190e+00,
     848.81660732296070e+00
 ])
-
 # LUPIN ratio response (neutron response / ICRU dose-to-fluence conversion factor)
 # Data from "Experimental characterization of the LUPIN Rem counter in monoenergetic neutron fields"
 lupin_ratio_response = np.array([
@@ -255,6 +275,50 @@ total_lupin_dose = np.sum(lupin_dose_per_bin)
 # Calculate the final correction factor for the LUPIN detector
 # If LUPIN overestimates the dose, C < 1. If it underestimates, C > 1.
 lupin_correction_factor = total_true_dose / total_lupin_dose
+
+# Created a debug plot with interpolated curves
+# Create the figure and the first y-axis (for Fluence)
+fig, ax1 = plt.subplots(figsize=(9, 6))
+
+# Plot Fluence on the left y-axis
+color_fluence = 'tab:blue'
+ax1.set_xlabel('Energy $E_{center}$ [MeV]') # Adjust unit if it is eV or GeV
+ax1.set_ylabel('Fluence [cm$^{-2}$]', color=color_fluence)
+
+# Using step plot since fluence is typically binned, or plot if it is a smooth curve
+line1 = ax1.step(E_center, fluence, where='mid', color=color_fluence, alpha=0.8, label='Fluence', linestyle='-')
+ax1.tick_params(axis='y', labelcolor=color_fluence)
+
+# Set energy axis to log scale (standard for radiation protection spectra)
+ax1.set_xscale('log')
+# Set fluence axis to log scale if it spans multiple orders of magnitude
+ax1.set_yscale('log')
+
+# Create a second y-axis sharing the same x-axis
+ax2 = ax1.twinx()
+
+# Plot ICRU factors and LUPIN ratio on the right y-axis (using log scale as well)
+color_icru = 'tab:orange'
+color_lupin = 'tab:green'
+
+line2 = ax2.plot(E_center, icru_at_sim_energies, color=color_icru, label='ICRU Factor [pSv cm$^{2}$]', linestyle='--')
+line3 = ax2.plot(E_center, lupin_ratio_at_sim_energies, color=color_lupin, label='LUPIN Ratio', linestyle='-.')
+
+ax2.set_ylabel('ICRU Factor & LUPIN Ratio', color='black')
+ax2.tick_params(axis='y', labelcolor='black')
+ax2.set_yscale('log') # ICRU conversion factors often span orders of magnitude
+
+# Combine legends from both axes into a single box
+lines = line1 + line2 + line3
+labels = [l.get_label() for l in lines]
+ax1.legend(lines, labels, loc='upper left')
+
+plt.title('Debug Plot: Fluence, ICRU, and LUPIN Response')
+fig.tight_layout()
+plt.grid(True, which="both", linestyle=":", alpha=0.5)
+
+plt.savefig('DEBUG_interpolatedcurves.png', dpi=300)
+plt.close()
 
 # ==============================================================================
 # OUTPUT RESULTS
