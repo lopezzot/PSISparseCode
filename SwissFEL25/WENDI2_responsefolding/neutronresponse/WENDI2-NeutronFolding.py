@@ -291,6 +291,84 @@ total_measured_dose = np.nansum(measured_dose_spectrum)
 # 5. Calculate the global correction factor for this specific environment
 global_bias = total_measured_dose / total_ideal_dose
 
+# Created a debug plot with interpolated curves
+# Create the figure and the first y-axis (for Fluence)
+fig, ax1 = plt.subplots(figsize=(9, 6))
+
+# Plot Fluence on the left y-axis
+color_fluence = 'tab:blue'
+ax1.set_xlabel('Energy $E_{center}$ [MeV]') # Adjust unit if it is eV or GeV
+ax1.set_ylabel('Fluence [cm$^{-2}$]', color=color_fluence)
+
+# Using step plot since fluence is typically binned, or plot if it is a smooth curve
+line1 = ax1.step(E_center, fluence, where='mid', color=color_fluence, alpha=0.8, label='Fluence', linestyle='-')
+ax1.tick_params(axis='y', labelcolor=color_fluence)
+
+# Set energy axis to log scale (standard for radiation protection spectra)
+ax1.set_xscale('log')
+# Set fluence axis to log scale if it spans multiple orders of magnitude
+ax1.set_yscale('log')
+
+# Create a second y-axis sharing the same x-axis
+ax2 = ax1.twinx()
+
+# Plot ICRU factors and WENDI ratio on the right y-axis (using log scale as well)
+color_icru = 'tab:orange'
+color_lupin = 'tab:green'
+
+line2 = ax2.plot(E_center, h10_interp, color=color_icru, label='ICRU Factor [pSv cm$^{2}$]', linestyle='--')
+line3 = ax2.plot(E_center, ratio_interp, color=color_lupin, label='WENDI Ratio', linestyle='-.')
+
+ax2.set_ylabel('ICRU Factor & WENDI Ratio', color='black')
+ax2.tick_params(axis='y', labelcolor='black')
+ax2.set_yscale('log') # ICRU conversion factors often span orders of magnitude
+
+# Combine legends from both axes into a single box
+lines = line1 + line2 + line3
+labels = [l.get_label() for l in lines]
+ax1.legend(lines, labels, loc='upper left')
+
+plt.title('Debug Plot: Fluence, ICRU, and WENDI Response')
+fig.tight_layout()
+plt.grid(True, which="both", linestyle=":", alpha=0.5)
+
+plt.savefig('DEBUG_interpolatedcurves.png', dpi=300)
+plt.close()
+
+# ==============================================================================
+# DOSE COMPARISON PLOT
+# ==============================================================================
+# Create a new figure for comparing True Dose vs WENDI Dose per bin
+fig_dose, ax_dose = plt.subplots(figsize=(9, 6))
+
+# Plot True Dose per bin using a step plot (ideal for binned data)
+ax_dose.step(E_center, ideal_dose_spectrum, where='mid', color='tab:blue',
+             alpha=0.8, label='True Dose H*(10)', linestyle='-')
+
+# Plot WENDI estimated Dose per bin
+ax_dose.step(E_center, measured_dose_spectrum, where='mid', color='tab:red',
+             alpha=0.8, label='WENDI Estimated Dose', linestyle='--')
+
+# Set axes labels
+ax_dose.set_xlabel('Energy $E_{center}$ [MeV]')
+ax_dose.set_ylabel('Ambient Dose Equivalent per bin [pSv]')
+
+# Set axes to log scale (standard for dosimetric distributions over energy)
+ax_dose.set_xscale('log')
+ax_dose.set_yscale('log')
+
+# Add legend, title, and grid for readability
+ax_dose.legend(loc='upper left')
+plt.title('Analytical Dose Comparison: True H*(10) vs WENDI Estimate')
+plt.grid(True, which="both", linestyle=":", alpha=0.5)
+
+# Adjust layout to prevent clipping
+fig_dose.tight_layout()
+
+# Save the figure to file and close the plot
+plt.savefig('DEBUG_dose_comparison.png', dpi=300)
+plt.close(fig_dose)
+
 print("\n--- DOSIMETRY RESULTS ---")
 print(f"Total Ideal Expected Dose: {total_ideal_dose:.3e} pSv")
 print(f"Total WENDI-2 Measured Dose: {total_measured_dose:.3e} pSv")
