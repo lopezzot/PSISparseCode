@@ -321,6 +321,40 @@ plt.savefig('DEBUG_interpolatedcurves.png', dpi=300)
 plt.close()
 
 # ==============================================================================
+# DOSE COMPARISON PLOT
+# ==============================================================================
+# Create a new figure for comparing True Dose vs LUPIN Dose per bin
+fig_dose, ax_dose = plt.subplots(figsize=(9, 6))
+
+# Plot True Dose per bin using a step plot (ideal for binned data)
+ax_dose.step(E_center, true_dose_per_bin, where='mid', color='tab:blue',
+             alpha=0.8, label='True Dose H*(10)', linestyle='-')
+
+# Plot LUPIN estimated Dose per bin
+ax_dose.step(E_center, lupin_dose_per_bin, where='mid', color='tab:red',
+             alpha=0.8, label='LUPIN Estimated Dose', linestyle='--')
+
+# Set axes labels
+ax_dose.set_xlabel('Energy $E_{center}$ [MeV]')
+ax_dose.set_ylabel('Ambient Dose Equivalent per bin [pSv]')
+
+# Set axes to log scale (standard for dosimetric distributions over energy)
+ax_dose.set_xscale('log')
+ax_dose.set_yscale('log')
+
+# Add legend, title, and grid for readability
+ax_dose.legend(loc='upper left')
+plt.title('Analytical Dose Comparison: True H*(10) vs LUPIN Estimate')
+plt.grid(True, which="both", linestyle=":", alpha=0.5)
+
+# Adjust layout to prevent clipping
+fig_dose.tight_layout()
+
+# Save the figure to file and close the plot
+plt.savefig('DEBUG_dose_comparison.png', dpi=300)
+plt.close(fig_dose)
+
+# ==============================================================================
 # OUTPUT RESULTS
 # ==============================================================================
 print("-" * 50)
