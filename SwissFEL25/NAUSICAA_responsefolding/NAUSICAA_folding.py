@@ -138,26 +138,72 @@ plt.show()
 #    0.01, 0.015, 0.020, 0.030, 0.040, 0.050, 0.060, 0.080, 0.100, 0.150, 0.200, 0.300, 0.400, 0.500, 0.600, 0.800, 1, 1.5, 2, 3, 4, 5, 6, 8, 10,
 #    20.0, 30.0, 40.0, 50.0, 60.0, 80.0, 100.0
 #])
-icru_energy_mev = np.array([
-    0.01, 0.015, 0.02, 0.03, 0.04, 0.05, 0.06, 0.08, 0.1, 0.15,
-    0.2, 0.3, 0.4, 0.5, 0.6, 0.8, 1.0, 1.5, 2.0, 3.0, 4.0, 5.0,
-    6.0, 8.0, 10.0, 20.0, 30.0, 40.0, 50.0, 100.0, 200.0, 500.0,
-    1000.0, 2000.0, 5000.0, 10000.0
-])
 
 #icru_h10_psv_cm2 = np.array([
 #    0.061, 0.83, 1.05, 0.81, 0.64, 0.55, 0.51, 0.53, 0.61, 0.89, 1.20, 1.80, 2.38, 2.93, 3.44, 4.38, 5.2, 6.9, 8.6, 11.1, 13.4, 15.5, 17.6, 21.6, 25.6,
 #    27.5, 30.4, 32.2, 33.6, 34.6, 35.8, 36.8
 #])
-icru_h10_psv_cm2 = np.array([
+
+# --- ICRP 74 standard reference values for photons ---
+icrp74_photons_energy_mev = np.array([
+    1.00e-02, 1.50e-02, 2.00e-02, 3.00e-02, 4.00e-02, 5.00e-02, 6.00e-02,
+    8.00e-02, 1.00e-01, 1.50e-01, 2.00e-01, 3.00e-01, 4.00e-01, 5.00e-01,
+    6.00e-01, 8.00e-01, 1.00e+00, 1.50e+00, 2.00e+00, 3.00e+00, 4.00e+00,
+    5.00e+00, 6.00e+00, 8.00e+00, 1.00e+01
+])
+
+icrp74_photons_h10_sv_cm2 = np.array([
+    6.10e-14, 8.30e-13, 1.05e-12, 8.10e-13, 6.40e-13, 5.50e-13, 5.10e-13,
+    5.30e-13, 6.10e-13, 8.90e-13, 1.20e-12, 1.80e-12, 2.38e-12, 2.93e-12,
+    3.44e-12, 4.38e-12, 5.20e-12, 6.90e-12, 8.60e-12, 1.11e-11, 1.34e-11,
+    1.55e-11, 1.76e-11, 2.16e-11, 2.56e-11
+])
+
+# --- Pelliccioni high-energy extension values for photons ---
+pelliccioni_photons_energy_mev = np.array([
+    1.0e-02, 1.5e-02, 2.0e-02, 3.0e-02, 4.0e-02, 5.0e-02, 6.0e-02, 8.0e-02,
+    1.0e-01, 1.5e-01, 2.0e-01, 3.0e-01, 4.0e-01, 5.0e-01, 6.0e-01, 8.0e-01,
+    1.0e+00, 1.5e+00, 2.0e+00, 3.0e+00, 4.0e+00, 5.0e+00, 6.0e+00, 8.0e+00,
+    1.0e+01, 2.0e+01, 3.0e+01, 4.0e+01, 5.0e+01, 1.0e+02, 2.0e+02, 5.0e+02,
+    1.0e+03, 2.0e+03, 5.0e+03, 1.0e+04
+])
+
+pelliccioni_photons_h10_sv_cm2 = np.array([
     8.33e-14, 8.52e-13, 1.05e-12, 0.80e-12, 0.62e-12, 0.52e-12, 0.51e-12,
     0.56e-12, 0.62e-12, 0.87e-12, 1.23e-12, 1.81e-12, 2.36e-12, 2.78e-12,
     3.46e-12, 4.29e-12, 5.18e-12, 6.92e-12, 8.25e-12, 1.04e-11, 1.07e-11,
     1.04e-11, 9.58e-12, 9.10e-12, 8.76e-12, 8.29e-12, 8.23e-12, 8.26e-12,
     8.64e-12, 9.00e-12, 1.02e-11, 1.18e-11, 1.17e-11, 1.15e-11, 1.33e-11,
     1.22e-11
-]) # this is in Sv
-icru_h10_psv_cm2 = icru_h10_psv_cm2 * 1e12 # now in pSv
+])
+
+# --- Merge datasets: ICRP74 up to 3 MeV, Pelliccioni above 3 MeV ---
+# We used 3 MeV instead of 10 MeV to cross the two functions
+# because at 3 MeV the KERMA approximation is still valid and the
+# Pelliccioni method agrees well with the ICRP74 method.
+# At 10 MeV this approximation is no longer valid and the two lines
+# do not agree on the convertion factor.
+# Filter ICRP74 data up to 3 MeV (inclusive)
+icrp_mask_photons = icrp74_photons_energy_mev <= 3.0
+
+# Filter Pelliccioni data strictly above 10.0 MeV
+pell_mask_photons = pelliccioni_photons_energy_mev > 3.0
+
+icru_photons_energy_mev = np.concatenate([
+    icrp74_photons_energy_mev[icrp_mask_photons],
+    pelliccioni_photons_energy_mev[pell_mask_photons]
+])
+
+icru_photons_h10_sv_cm2 = np.concatenate([
+    icrp74_photons_h10_sv_cm2[icrp_mask_photons],
+    pelliccioni_photons_h10_sv_cm2[pell_mask_photons]
+])
+
+# --- Convert Sv * cm^2 to pSv * cm^2 (1 Sv = 1e12 pSv) ---
+icru_photons_h10_psv_cm2 = icru_photons_h10_sv_cm2 * 1e12
+
+icru_energy_mev = icru_photons_energy_mev
+icru_h10_psv_cm2 = icru_photons_h10_psv_cm2
 
 # Log-log interpolation of ICRU conversion coefficients to match FLUKA bin centers
 # Using log10 for both axes is standard for dosimetric data interpolation
