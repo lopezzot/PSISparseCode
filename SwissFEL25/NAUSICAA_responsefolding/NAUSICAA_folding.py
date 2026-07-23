@@ -1,4 +1,6 @@
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 # This is the low energy bin side for energy of the photon spectrum at position 4, i.e. the highest position of the NAUSICAA at the SwissFEL 2025 campaign.
@@ -130,7 +132,7 @@ ax.legend(loc='upper right', frameon=True, facecolor='#f7f7f7')
 
 plt.tight_layout()
 plt.savefig('nausicaa_fixed_response_plot.png', dpi=300)
-plt.show()
+plt.close()
 
 # Source Data 1: ICRP 74 Fluence-to-H*(10) for photons (ends at 10 MeV) ---
 # Higher energies extension from Pelliccioni
@@ -274,7 +276,7 @@ ax_bot.set_ylim(-0.5, 12.0)
 
 # Remove plt.tight_layout() as constrained_layout handles it now
 plt.savefig('nausicaa_response_fluence_stacked.png', dpi=300)
-plt.show()
+plt.close()
 
 # ==============================================================================
 # --- PLOTTING: FLUKA FLUENCE + NAUSICAA RESPONSE + ICRU COEFFICIENTS ---
@@ -314,4 +316,4 @@ ax_bot.legend(loc='lower right')
 ax_bot.set_xlim(E_center.min(), E_center.max())
 
 plt.savefig('photon_fluence_response_icru_stacked.png', dpi=300)
-plt.show()
+plt.close()
