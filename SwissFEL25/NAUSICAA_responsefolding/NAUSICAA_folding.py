@@ -331,43 +331,6 @@ plt.savefig("fluence_h10_response_dual_axis.png", dpi=300)
 plt.close(fig)
 
 # ==============================================================================
-# --- PLOTTING: FLUKA FLUENCE + NAUSICAA RESPONSE (MASKED TO SPECTRUM RANGE) ---
-# ==============================================================================
-
-# Create a mask to filter NAUSICAA data so it only shows within the FLUKA spectrum range
-plot_mask = (nausicaa_energy_mev >= E_center.min()) & (nausicaa_energy_mev <= E_center.max())
-plot_nausicaa_E = nausicaa_energy_mev[plot_mask]
-plot_nausicaa_resp = nausicaa_response[plot_mask]
-fig, (ax_top, ax_bot) = plt.subplots(2, 1, figsize=(10, 8), sharex=True, constrained_layout=True)
-
-# Top Subplot: Particle Fluence from FLUKA
-ax_top.plot(E_center, fluence, color='blue', marker='.', linestyle='-', linewidth=1.5, label='Neutron Fluence')
-ax_top.set_yscale('log')
-ax_top.set_ylabel('Fluence (cm$^{-2}$)', fontsize=11)
-ax_top.grid(True, which="both", linestyle="--", alpha=0.5)
-ax_top.set_title(f'FLUKA Photon Fluence vs NAUSICAA Response Comparison', fontsize=13, pad=10)
-ax_top.legend(loc='upper right')
-
-# Bottom Subplot: NAUSICAA Response
-ax_bot.plot(plot_nausicaa_E, plot_nausicaa_resp, color='darkorange', marker='o', linestyle='-', linewidth=1.5, label='NAUSICAA Response')
-ax_bot.axhline(1.0, color='gray', linestyle=':', alpha=0.7, label='Reference (1.0)')
-
-ax_bot.set_xscale('log')
-ax_bot.set_yscale('linear')
-ax_bot.set_xlabel('Energy (MeV)', fontsize=11)
-ax_bot.set_ylabel('Relative Response', fontsize=11)
-ax_bot.grid(True, which="both", linestyle="--", alpha=0.5)
-ax_bot.legend(loc='upper right')
-
-# Ensure X-axis limits match the simulation exactly
-ax_bot.set_xlim(E_center.min(), E_center.max())
-ax_bot.set_ylim(-0.5, 12.0)
-
-# Remove plt.tight_layout() as constrained_layout handles it now
-plt.savefig('nausicaa_response_fluence_stacked.png', dpi=300)
-plt.close()
-
-# ==============================================================================
 # --- PLOTTING: FLUKA FLUENCE + NAUSICAA RESPONSE + ICRU COEFFICIENTS ---
 # ==============================================================================
 
