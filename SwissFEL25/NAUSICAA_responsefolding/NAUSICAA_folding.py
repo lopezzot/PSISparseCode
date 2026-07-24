@@ -96,6 +96,17 @@ nausicaa_response = np.array([
 log_energy = -2.0 + (3.0 / 10.0) * raw_x
 nausicaa_energy_mev = 10**log_energy
 
+# Energies for NAUSICAA relative response from ELSE (MeV)
+nausicaa_energy_else = [0.01, 0.015, 0.02, 0.03, 0.04, 0.05, 0.06, 0.08, 0.1, 0.15, 0.2, 0.3, 0.4, 0.5, 0.6, 0.8, 1, 1.5, 2, 3, 4, 5, 6, 8, 10]
+# Relative response of NAUSICAA from ELSE
+nausicaa_relative_response_else = [0, 0, 0, 0, 0.004842763, 0.352806632, 2.301432357, 8.673739113, 10.56133897, 7.002508385, 4.148623247, 2.12561611, 1.410127279, 1.144380419, 1, 0.946905818, 0.909688614, 0.881951532, 0.847079516, 0.896910875, 0.964267628, 1.033522915, 1.05798536, 1.160223887, 1.225733892]
+
+USE_ELSE = True
+
+if USE_ELSE:
+    nausicaa_energy_mev = np.array(nausicaa_energy_else)
+    nausicaa_response = np.array(nausicaa_relative_response_else)
+
 # ==============================================================================
 # Plotting the Reconstructed NAUSICAA Energy Response
 # ==============================================================================
@@ -240,6 +251,84 @@ print(f"Total True H*(10) Dose: {total_true_dose:.3e} pSv")
 print(f"Total Measured NAUSICAA Dose: {total_measured_dose:.3e} pSv")
 print(f"CALCULATED DOSE CORRECTION FACTOR: {correction_factor:.3f}")
 print("==================================================")
+
+import matplotlib.pyplot as plt
+
+# ==============================================================================
+# --- DUAL Y-AXIS OVERLAY PLOT: FLUENCE VS CONVERSION FACTORS & RESPONSE ---
+# ==============================================================================
+fig, ax1 = plt.subplots(figsize=(9, 6))
+
+# --- Primary Y-Axis (Left): Photon Fluence ---
+color_fluence = "tab:blue"
+line1 = ax1.plot(
+    E_center,
+    fluence,
+    label=r"Photon Fluence ($\Phi$) [cm$^{-2}$]",
+    color=color_fluence,
+    linestyle="-",
+    linewidth=1.8,
+)
+
+ax1.set_xscale("log")
+ax1.set_yscale("log")
+ax1.set_xlabel("Energy [MeV]", fontsize=11, fontweight="bold")
+ax1.set_ylabel(
+    r"Photon Fluence ($\Phi$) [cm$^{-2}$]",
+    color=color_fluence,
+    fontsize=11,
+    fontweight="bold",
+)
+ax1.tick_params(axis="y", labelcolor=color_fluence)
+ax1.grid(True, which="both", linestyle="--", alpha=0.5)
+
+# --- Secondary Y-Axis (Right): Conversion Factors & Relative Response ---
+ax2 = ax1.twinx()
+
+color_h10 = "tab:orange"
+line2 = ax2.plot(
+    E_center,
+    interpolated_h10,
+    label=r"ICRU Factor $h_{10}$ [pSv cm$^2$]",
+    color=color_h10,
+    linestyle="--",
+    linewidth=1.8,
+)
+
+color_resp = "tab:green"
+line3 = ax2.plot(
+    E_center,
+    interpolated_response,
+    label="LUPIN/NAUSICAA Relative Response",
+    color=color_resp,
+    linestyle="-.",
+    linewidth=1.8,
+)
+
+ax2.set_yscale("log")
+ax2.set_ylabel(
+    r"Conversion Factor [$pSv \cdot cm^2$] / Relative Response",
+    fontsize=11,
+    fontweight="bold",
+)
+
+# --- Combine Legends from Both Axes into a Single Box ---
+lines = line1 + line2 + line3
+labels = [l.get_label() for l in lines]
+ax1.legend(lines, labels, loc="best", frameon=True, facecolor="#f9f9f9")
+
+# Set title
+plt.title(
+    "Fluence vs. ICRU Conversion Factors and Detector Response",
+    fontsize=12,
+    pad=12,
+    fontweight="bold",
+)
+
+# Save figure directly and close to free memory
+plt.tight_layout()
+plt.savefig("fluence_h10_response_dual_axis.png", dpi=300)
+plt.close(fig)
 
 # ==============================================================================
 # --- PLOTTING: FLUKA FLUENCE + NAUSICAA RESPONSE (MASKED TO SPECTRUM RANGE) ---
