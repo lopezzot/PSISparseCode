@@ -1,4 +1,6 @@
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 # This is the low energy bin side for energy of the photon spectrum at position 4, i.e. the highest position of the NAUSICAA at the SwissFEL 2025 campaign.
@@ -94,6 +96,17 @@ nausicaa_response = np.array([
 log_energy = -2.0 + (3.0 / 10.0) * raw_x
 nausicaa_energy_mev = 10**log_energy
 
+# Energies for NAUSICAA relative response from ELSE (MeV)
+nausicaa_energy_else = [0.01, 0.015, 0.02, 0.03, 0.04, 0.05, 0.06, 0.08, 0.1, 0.15, 0.2, 0.3, 0.4, 0.5, 0.6, 0.8, 1, 1.5, 2, 3, 4, 5, 6, 8, 10]
+# Relative response of NAUSICAA from ELSE
+nausicaa_relative_response_else = [0, 0, 0, 0, 0.004842763, 0.352806632, 2.301432357, 8.673739113, 10.56133897, 7.002508385, 4.148623247, 2.12561611, 1.410127279, 1.144380419, 1, 0.946905818, 0.909688614, 0.881951532, 0.847079516, 0.896910875, 0.964267628, 1.033522915, 1.05798536, 1.160223887, 1.225733892]
+
+USE_ELSE = True
+
+if USE_ELSE:
+    nausicaa_energy_mev = np.array(nausicaa_energy_else)
+    nausicaa_response = np.array(nausicaa_relative_response_else)
+
 # ==============================================================================
 # Plotting the Reconstructed NAUSICAA Energy Response
 # ==============================================================================
@@ -130,7 +143,7 @@ ax.legend(loc='upper right', frameon=True, facecolor='#f7f7f7')
 
 plt.tight_layout()
 plt.savefig('nausicaa_fixed_response_plot.png', dpi=300)
-plt.show()
+plt.close()
 
 # Source Data 1: ICRP 74 Fluence-to-H*(10) for photons (ends at 10 MeV) ---
 # Higher energies extension from Pelliccioni
@@ -239,42 +252,83 @@ print(f"Total Measured NAUSICAA Dose: {total_measured_dose:.3e} pSv")
 print(f"CALCULATED DOSE CORRECTION FACTOR: {correction_factor:.3f}")
 print("==================================================")
 
+import matplotlib.pyplot as plt
+
 # ==============================================================================
-# --- PLOTTING: FLUKA FLUENCE + NAUSICAA RESPONSE (MASKED TO SPECTRUM RANGE) ---
+# --- DUAL Y-AXIS OVERLAY PLOT: FLUENCE VS CONVERSION FACTORS & RESPONSE ---
 # ==============================================================================
+fig, ax1 = plt.subplots(figsize=(9, 6))
 
-# Create a mask to filter NAUSICAA data so it only shows within the FLUKA spectrum range
-plot_mask = (nausicaa_energy_mev >= E_center.min()) & (nausicaa_energy_mev <= E_center.max())
-plot_nausicaa_E = nausicaa_energy_mev[plot_mask]
-plot_nausicaa_resp = nausicaa_response[plot_mask]
-fig, (ax_top, ax_bot) = plt.subplots(2, 1, figsize=(10, 8), sharex=True, constrained_layout=True)
+# --- Primary Y-Axis (Left): Photon Fluence ---
+color_fluence = "tab:blue"
+line1 = ax1.plot(
+    E_center,
+    fluence,
+    label=r"Photon Fluence ($\Phi$) [cm$^{-2}$]",
+    color=color_fluence,
+    linestyle="-",
+    linewidth=1.8,
+)
 
-# Top Subplot: Particle Fluence from FLUKA
-ax_top.plot(E_center, fluence, color='blue', marker='.', linestyle='-', linewidth=1.5, label='Neutron Fluence')
-ax_top.set_yscale('log')
-ax_top.set_ylabel('Fluence (cm$^{-2}$)', fontsize=11)
-ax_top.grid(True, which="both", linestyle="--", alpha=0.5)
-ax_top.set_title(f'FLUKA Photon Fluence vs NAUSICAA Response Comparison', fontsize=13, pad=10)
-ax_top.legend(loc='upper right')
+ax1.set_xscale("log")
+ax1.set_yscale("log")
+ax1.set_xlabel("Energy [MeV]", fontsize=11, fontweight="bold")
+ax1.set_ylabel(
+    r"Photon Fluence ($\Phi$) [cm$^{-2}$]",
+    color=color_fluence,
+    fontsize=11,
+    fontweight="bold",
+)
+ax1.tick_params(axis="y", labelcolor=color_fluence)
+ax1.grid(True, which="both", linestyle="--", alpha=0.5)
 
-# Bottom Subplot: NAUSICAA Response
-ax_bot.plot(plot_nausicaa_E, plot_nausicaa_resp, color='darkorange', marker='o', linestyle='-', linewidth=1.5, label='NAUSICAA Response')
-ax_bot.axhline(1.0, color='gray', linestyle=':', alpha=0.7, label='Reference (1.0)')
+# --- Secondary Y-Axis (Right): Conversion Factors & Relative Response ---
+ax2 = ax1.twinx()
 
-ax_bot.set_xscale('log')
-ax_bot.set_yscale('linear')
-ax_bot.set_xlabel('Energy (MeV)', fontsize=11)
-ax_bot.set_ylabel('Relative Response', fontsize=11)
-ax_bot.grid(True, which="both", linestyle="--", alpha=0.5)
-ax_bot.legend(loc='upper right')
+color_h10 = "tab:orange"
+line2 = ax2.plot(
+    E_center,
+    interpolated_h10,
+    label=r"ICRU Factor $h_{10}$ [pSv cm$^2$]",
+    color=color_h10,
+    linestyle="--",
+    linewidth=1.8,
+)
 
-# Ensure X-axis limits match the simulation exactly
-ax_bot.set_xlim(E_center.min(), E_center.max())
-ax_bot.set_ylim(-0.5, 12.0)
+color_resp = "tab:green"
+line3 = ax2.plot(
+    E_center,
+    interpolated_response,
+    label="LUPIN/NAUSICAA Relative Response",
+    color=color_resp,
+    linestyle="-.",
+    linewidth=1.8,
+)
 
-# Remove plt.tight_layout() as constrained_layout handles it now
-plt.savefig('nausicaa_response_fluence_stacked.png', dpi=300)
-plt.show()
+ax2.set_yscale("log")
+ax2.set_ylabel(
+    r"Conversion Factor [$pSv \cdot cm^2$] / Relative Response",
+    fontsize=11,
+    fontweight="bold",
+)
+
+# --- Combine Legends from Both Axes into a Single Box ---
+lines = line1 + line2 + line3
+labels = [l.get_label() for l in lines]
+ax1.legend(lines, labels, loc="best", frameon=True, facecolor="#f9f9f9")
+
+# Set title
+plt.title(
+    "Fluence vs. ICRU Conversion Factors and Detector Response",
+    fontsize=12,
+    pad=12,
+    fontweight="bold",
+)
+
+# Save figure directly and close to free memory
+plt.tight_layout()
+plt.savefig("fluence_h10_response_dual_axis.png", dpi=300)
+plt.close(fig)
 
 # ==============================================================================
 # --- PLOTTING: FLUKA FLUENCE + NAUSICAA RESPONSE + ICRU COEFFICIENTS ---
@@ -314,4 +368,4 @@ ax_bot.legend(loc='lower right')
 ax_bot.set_xlim(E_center.min(), E_center.max())
 
 plt.savefig('photon_fluence_response_icru_stacked.png', dpi=300)
-plt.show()
+plt.close()
