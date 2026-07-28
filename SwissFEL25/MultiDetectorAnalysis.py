@@ -358,7 +358,7 @@ if __name__ == "__main__":
             threshold=20.0,
             ylim_plot=(-10, 500),
             splits=None,
-            correction_factor= 1.222
+            correction_factor= 1.483
         )
     except Exception as e:
         print(f"[-] Failed to process WENDI data: {e}")
@@ -382,7 +382,7 @@ if __name__ == "__main__":
             threshold=25.0,
             ylim_plot=(-5, 650),
             splits=lupin_position_splits,
-            correction_factor=0.9745
+            correction_factor=1.3092
         )
     except Exception as e:
         print(f"[-] Failed to process LUPIN data: {e}")
@@ -415,7 +415,7 @@ if __name__ == "__main__":
             threshold=10.0,
             ylim_plot=(-5, 1100),
             splits=nausicaa_position_splits,
-            correction_factor=0.811
+            correction_factor=0.796
         )
     except Exception as e:
         print(f"[-] Failed to process NAUSICAA data: {e}")
