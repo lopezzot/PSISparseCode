@@ -246,10 +246,11 @@ def analyze_and_plot_detector(df_det, df_mach, detector_name, dose_col, threshol
             
             total_stable_intervals = time_mask.sum()
             
-            # MODIFIED: Active mask now explicitly requires a non-null bunch charge (> 190 pC) 
+            # Active mask explicitly requires a non-null bunch charge (> 190 pC) 
             # to filter out machine drops/interlocks during a stable frequency regime.
             active_mask = time_mask & (dataframe_selection[dose_col] > threshold) & (dataframe_selection['charge_pC'] > 190.0)
             dose_rates_active = dataframe_selection.loc[active_mask, dose_col]
+            charge_active = dataframe_selection.loc[active_mask, 'charge_pC']
             
             n_points = len(dose_rates_active)
             display_label = f"{freq} Hz ({label_suffix})" if label_suffix else f"{freq} Hz"
@@ -259,28 +260,44 @@ def analyze_and_plot_detector(df_det, df_mach, detector_name, dose_col, threshol
                 median_dose = dose_rates_active.median()
                 std_dose = dose_rates_active.std() if n_points > 1 else 0.0
                 sem_dose = dose_rates_active.sem() if n_points > 1 else 0.0
+
+                # Calculate mean charge for normalization
+                mean_charge = charge_active.mean()
+
+                # Calculate dose per burst in nSv (multiplying µSv by 1000)
+                bursts_per_hour = freq * 3600.0
+                dose_per_burst_nsv = (mean_dose * 1000.0) / bursts_per_hour
+                sem_per_burst_nsv = (sem_dose * 1000.0) / bursts_per_hour
+
+                # Calculate dose normalized to charge (nSv/pC)
+                dose_per_pc = dose_per_burst_nsv / mean_charge
+                sem_per_pc = sem_per_burst_nsv / mean_charge
                 
                 print(f"\n[+] Frequency Regime: {display_label}")
                 print(f"    Total intervals in stable window     : {total_stable_intervals}")
                 print(f"    Active beam intervals (> {threshold} µSv/h) : {n_points}")
+                print(f"    Average Bunch Charge                 : {mean_charge:.2f} pC")
                 print(f"    Mean Dose Rate (Active Beam)        : {mean_dose:.3f} ± {sem_dose:.3f} µSv/h (SEM)")
+                print(f"    Mean Dose per Burst                  : {dose_per_burst_nsv:.5f} ± {sem_per_burst_nsv:.5f} nSv/burst")
+                print(f"    Mean Dose per pC                     : {dose_per_pc:.5f} ± {sem_per_pc:.5f} nSv/pC")
                 
                 # --- Print baseline and net dose if calculated ---
                 if baseline_range is not None and baseline_value > 0:
                     net_dose = mean_dose - baseline_value
+                    net_dose_per_burst_nsv = (net_dose * 1000.0) / bursts_per_hour
                     print(f"    Baseline ({baseline_range[0]}-{baseline_range[1]})               : {baseline_value:.3f} µSv/h")
                     print(f"    Net Mean Dose Rate (Mean-Baseline)  : {net_dose:.3f} ± {sem_dose:.3f} µSv/h (SEM)")
+                    print(f"    Net Dose per Burst                   : {net_dose_per_burst_nsv:.5f} ± {sem_per_burst_nsv:.5f} nSv/burst")
 
                 # Apply optional correction factor to the net dose
                     if correction_factor is not None:
                         corrected_net_dose = net_dose * correction_factor
                         corrected_sem = sem_dose * correction_factor # Propagate error through a constant
-                        # Not colored in red
-                        #print(f"    Corrected Net Dose by sensitivity (x {correction_factor:.2f})         : {corrected_net_dose:.3f} ± {corrected_sem:.3f} µSv/h (SEM)")
+                        corrected_burst_nsv = (corrected_net_dose * 1000.0) / bursts_per_hour
+                        corrected_burst_sem = (corrected_sem * 1000.0) / bursts_per_hour
                         # Colored in red
-                        print(f"\033[31m    Corrected Net Dose by sensitivity (x {correction_factor:.2f})  : "
-      f"{corrected_net_dose:.3f} ± {corrected_sem:.3f} µSv/h (SEM)\033[0m")
-                # -------------------------------------------------        
+                        print(f"\033[31m    Corrected Net Dose by sensitivity (x {correction_factor:.2f})  : " f"{corrected_net_dose:.3f} ± {corrected_sem:.3f} µSv/h (SEM)\033[0m")
+                        print(f"\033[31m    Corrected Net Dose per Burst         : " f"{corrected_burst_nsv:.5f} ± {corrected_burst_sem:.5f} nSv/burst\033[0m")
                 
                 #print(f"    Median Dose Rate (Robust Peak)      : {median_dose:.3f} µSv/h")
                 #print(f"    Data Standard Deviation (σ)         : {std_dose:.3f} µSv/h")
