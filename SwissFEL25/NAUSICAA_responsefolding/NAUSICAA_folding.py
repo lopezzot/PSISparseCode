@@ -299,7 +299,7 @@ color_resp = "tab:green"
 line3 = ax2.plot(
     E_center,
     interpolated_response,
-    label="LUPIN/NAUSICAA Relative Response",
+    label="NAUSICAA Relative Response",
     color=color_resp,
     linestyle="-.",
     linewidth=1.8,
