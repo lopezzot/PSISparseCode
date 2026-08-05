@@ -7,3 +7,6 @@
 
 ### ESA Radioisotope Power Systems (RPS)
 - [RPS Project WP100 Progress Report](https://dpsich-my.sharepoint.com/:b:/g/personal/lorenzo_pezzotti_psi_ch/IQCRdwsYk4cLQ5zyQmGnfrNgAeW_gP6F89ZFrK12zWjiLvE?e=WU1Ekm), ESA-PSI meeting, 9/7/2026 (PSI restricted link)
+
+### SwissELITE
+- [Update on the SwissFEL 2025 measurement campaign & SWISSELITE EMPANADE Project](https://dpsich-my.sharepoint.com/:b:/g/personal/lorenzo_pezzotti_psi_ch/IQDZ7RfmUN5HQoEx5fDv9JcRARHAyvZhXXTs9zUpVLFcN_E?e=i679Ac), PSI meeting, 6/8/2026 (PSI restricted link)
