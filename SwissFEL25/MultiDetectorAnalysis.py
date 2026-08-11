@@ -130,16 +130,16 @@ def load_pandora_data(filepath):
     Loads PANDORA detector logs by dynamically skipping the variable header block.
     Uses the provided Unix timestamp for robust timezone conversion.
     """
-    # Dynamically find the row where the actual data table starts
     skip_lines = 0
     with open(filepath, 'r', encoding='latin-1', errors='replace') as f:
         for i, line in enumerate(f):
+            # Find the row where the actual data table starts
             if line.startswith('Index'):
                 skip_lines = i
                 break
 
-    # Load the dataframe using tab separator
-    df_pandora = pd.read_csv(filepath, sep='\t', skiprows=skip_lines, encoding='latin-1')
+    # Load the dataframe using COMMA separator instead of TAB
+    df_pandora = pd.read_csv(filepath, sep=',', skiprows=skip_lines, encoding='latin-1')
 
     # Clean column names to prevent trailing space issues
     df_pandora.columns = df_pandora.columns.str.strip()
@@ -484,3 +484,39 @@ if __name__ == "__main__":
         )
     except Exception as e:
         print(f"[-] Failed to process DRPS 387m data: {e}")
+
+    # -------------------------------------------------------------------------
+    # RUN PANDORA PIPELINE (NEUTRONS & GAMMA)
+    # -------------------------------------------------------------------------
+    print("\n[*] Processing PANDORA detector...")
+    try:
+        # Load the Pandora dataframe once to save I/O time
+        df_pandora = load_pandora_data("PANDORA_data/SwissFELExperiment1July.csv")
+        # 1. Analyze Pandora Neutrons
+        print("\n[->] Analyzing Pandora Neutrons...")
+        analyze_and_plot_detector(
+            df_det=df_pandora,
+            df_mach=df_machine,
+            detector_name="Pandora_Neutrons",
+            dose_col="Neutron (Total) [µSv/h] (plotted)",
+            threshold=5.0,
+            ylim_plot=(-5, 1500),
+            splits=None,
+            baseline_range=("12:00", "13:00"),
+            correction_factor=None
+        )
+        # 2. Analyze Pandora Gamma
+        print("\n[->] Analyzing Pandora Gamma...")
+        analyze_and_plot_detector(
+            df_det=df_pandora,
+            df_mach=df_machine,
+            detector_name="Pandora_Gamma",
+            dose_col="Gamma [µSv/h] (plotted)",
+            threshold=1.0, 
+            ylim_plot=(-1, 350),
+            splits=None,
+            baseline_range=("12:00", "13:00"),
+            correction_factor=None
+        )
+    except Exception as e:
+        print(f"[-] Failed to process PANDORA data: {e}")
