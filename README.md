@@ -11,3 +11,4 @@
 
 ### SwissELITE
 - [Update on the SwissFEL 2025 measurement campaign & SWISSELITE EMPANADE Project](https://dpsich-my.sharepoint.com/:b:/g/personal/lorenzo_pezzotti_psi_ch/IQDZ7RfmUN5HQoEx5fDv9JcRARHAyvZhXXTs9zUpVLFcN_E?e=i679Ac), PSI meeting, 6/8/2026 (PSI restricted link)
+- [SWISSELITE EMAPANADE Project: Activities at PSI](https://dpsich-my.sharepoint.com/:b:/g/personal/lorenzo_pezzotti_psi_ch/IQDZD2R421Z4RJgHkFo17kr7AXsPplBN0-8Ra3Khfk6aETs?e=kGrsIH), SwissELITE EMPANADE meeting, 12/8/2026 (PSI restricted link)
