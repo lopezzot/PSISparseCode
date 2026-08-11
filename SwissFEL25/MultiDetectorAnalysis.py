@@ -125,11 +125,37 @@ def load_drps_data(folder_path):
 
     return df.sort_values('datetime')
 
+def load_pandora_data(filepath):
+    """
+    Loads PANDORA detector logs by dynamically skipping the variable header block.
+    Uses the provided Unix timestamp for robust timezone conversion.
+    """
+    skip_lines = 0
+    with open(filepath, 'r', encoding='latin-1', errors='replace') as f:
+        for i, line in enumerate(f):
+            # Find the row where the actual data table starts
+            if line.startswith('Index'):
+                skip_lines = i
+                break
+
+    # Load the dataframe using COMMA separator instead of TAB
+    df_pandora = pd.read_csv(filepath, sep=',', skiprows=skip_lines, encoding='latin-1')
+
+    # Clean column names to prevent trailing space issues
+    df_pandora.columns = df_pandora.columns.str.strip()
+
+    # Convert Unix timestamp to datetime and localize to Zurich
+    df_pandora['datetime'] = pd.to_datetime(df_pandora['Time (Unix) [sec]'], unit='s', utc=True)
+    df_pandora['datetime'] = df_pandora['datetime'].dt.tz_convert('Europe/Zurich')
+    df_pandora['datetime'] = df_pandora['datetime'].dt.as_unit('us')
+
+    return df_pandora.sort_values('datetime')
+
 # =============================================================================
 # --- 2. GENERIC PLOTTING & ANALYSIS ENGINE ---
 # =============================================================================
 
-def analyze_and_plot_detector(df_det, df_mach, detector_name, dose_col, threshold, ylim_plot=[-10, 500], splits=None, baseline_range=("07:00", "08:00"), correction_factor=None):
+def analyze_and_plot_detector(df_det, df_mach, detector_name, dose_col, threshold, ylim_plot=[-10, 500], splits=None, baseline_range=("07:00", "08:00"), correction_factor=None, baseline_stat="mean"):
     """
     Synchronizes any detector with machine logs, generates a synchronized 3-panel plot (handling optional time splits),
     and calculates statistical dose rates for stable frequency plateaus independently per split.
@@ -144,7 +170,12 @@ def analyze_and_plot_detector(df_det, df_mach, detector_name, dose_col, threshol
         
         mask_bg = (df_det['datetime'].dt.time >= start_time) & (df_det['datetime'].dt.time < end_time)
         if mask_bg.any():
-            baseline_value = df_det.loc[mask_bg, dose_col].mean()
+            if baseline_stat == "median":
+                # The PANDORA neutron dose has multiple spikes that disturb the baseline calculation, use median instead of mean
+                baseline_value = df_det.loc[mask_bg, dose_col].median()
+            else:
+                # Default to mean for all other detectors
+                baseline_value = df_det.loc[mask_bg, dose_col].mean()
             print(f"\n[*] Baseline calculated for {detector_name} ({start_bg} - {end_bg}): {baseline_value:.3f} µSv/h")
         else:
             print(f"\n[-] Warning: could not calculate baseline for {detector_name} in interval {start_bg} - {end_bg}.")
@@ -229,7 +260,7 @@ def analyze_and_plot_detector(df_det, df_mach, detector_name, dose_col, threshol
     tolerance = 0.5
 
     print("\n" + "="*75)
-    print(f"  {detector_name.upper()} NEUTRON DOSE RATE ANALYSIS")
+    print(f"  {detector_name.upper()} DOSE RATE ANALYSIS")
     print("="*75)
 
     # Internal helper function to avoid repeating stats code for time blocks
@@ -458,3 +489,40 @@ if __name__ == "__main__":
         )
     except Exception as e:
         print(f"[-] Failed to process DRPS 387m data: {e}")
+
+    # -------------------------------------------------------------------------
+    # RUN PANDORA PIPELINE (NEUTRONS & GAMMA)
+    # -------------------------------------------------------------------------
+    print("\n[*] Processing PANDORA detector...")
+    try:
+        # Load the Pandora dataframe once to save I/O time
+        df_pandora = load_pandora_data("PANDORA_data/SwissFELExperiment1July.csv")
+        # 1. Analyze Pandora Neutrons
+        print("\n[->] Analyzing Pandora Neutrons...")
+        analyze_and_plot_detector(
+            df_det=df_pandora,
+            df_mach=df_machine,
+            detector_name="Pandora_Neutrons",
+            dose_col="Neutron (Total) [µSv/h] (plotted)",
+            threshold=10.0,
+            ylim_plot=(-5, 1500),
+            splits=None,
+            baseline_range=("12:00", "13:00"),
+            correction_factor=None,
+            baseline_stat="median"
+        )
+        # 2. Analyze Pandora Gamma
+        print("\n[->] Analyzing Pandora Gamma...")
+        analyze_and_plot_detector(
+            df_det=df_pandora,
+            df_mach=df_machine,
+            detector_name="Pandora_Gamma",
+            dose_col="Gamma [µSv/h] (plotted)",
+            threshold=100.0, 
+            ylim_plot=(-1, 350),
+            splits=None,
+            baseline_range=("12:00", "13:00"),
+            correction_factor=None,
+        )
+    except Exception as e:
+        print(f"[-] Failed to process PANDORA data: {e}")
