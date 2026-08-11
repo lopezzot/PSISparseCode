@@ -260,7 +260,7 @@ def analyze_and_plot_detector(df_det, df_mach, detector_name, dose_col, threshol
     tolerance = 0.5
 
     print("\n" + "="*75)
-    print(f"  {detector_name.upper()} NEUTRON DOSE RATE ANALYSIS")
+    print(f"  {detector_name.upper()} DOSE RATE ANALYSIS")
     print("="*75)
 
     # Internal helper function to avoid repeating stats code for time blocks
@@ -504,7 +504,7 @@ if __name__ == "__main__":
             df_mach=df_machine,
             detector_name="Pandora_Neutrons",
             dose_col="Neutron (Total) [µSv/h] (plotted)",
-            threshold=5.0,
+            threshold=10.0,
             ylim_plot=(-5, 1500),
             splits=None,
             baseline_range=("12:00", "13:00"),
@@ -518,7 +518,7 @@ if __name__ == "__main__":
             df_mach=df_machine,
             detector_name="Pandora_Gamma",
             dose_col="Gamma [µSv/h] (plotted)",
-            threshold=1.0, 
+            threshold=100.0, 
             ylim_plot=(-1, 350),
             splits=None,
             baseline_range=("12:00", "13:00"),
