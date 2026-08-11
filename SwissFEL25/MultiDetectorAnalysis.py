@@ -125,6 +125,32 @@ def load_drps_data(folder_path):
 
     return df.sort_values('datetime')
 
+def load_pandora_data(filepath):
+    """
+    Loads PANDORA detector logs by dynamically skipping the variable header block.
+    Uses the provided Unix timestamp for robust timezone conversion.
+    """
+    # Dynamically find the row where the actual data table starts
+    skip_lines = 0
+    with open(filepath, 'r', encoding='latin-1', errors='replace') as f:
+        for i, line in enumerate(f):
+            if line.startswith('Index'):
+                skip_lines = i
+                break
+
+    # Load the dataframe using tab separator
+    df_pandora = pd.read_csv(filepath, sep='\t', skiprows=skip_lines, encoding='latin-1')
+
+    # Clean column names to prevent trailing space issues
+    df_pandora.columns = df_pandora.columns.str.strip()
+
+    # Convert Unix timestamp to datetime and localize to Zurich
+    df_pandora['datetime'] = pd.to_datetime(df_pandora['Time (Unix) [sec]'], unit='s', utc=True)
+    df_pandora['datetime'] = df_pandora['datetime'].dt.tz_convert('Europe/Zurich')
+    df_pandora['datetime'] = df_pandora['datetime'].dt.as_unit('us')
+
+    return df_pandora.sort_values('datetime')
+
 # =============================================================================
 # --- 2. GENERIC PLOTTING & ANALYSIS ENGINE ---
 # =============================================================================
