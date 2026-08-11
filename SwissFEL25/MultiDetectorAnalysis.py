@@ -155,7 +155,7 @@ def load_pandora_data(filepath):
 # --- 2. GENERIC PLOTTING & ANALYSIS ENGINE ---
 # =============================================================================
 
-def analyze_and_plot_detector(df_det, df_mach, detector_name, dose_col, threshold, ylim_plot=[-10, 500], splits=None, baseline_range=("07:00", "08:00"), correction_factor=None):
+def analyze_and_plot_detector(df_det, df_mach, detector_name, dose_col, threshold, ylim_plot=[-10, 500], splits=None, baseline_range=("07:00", "08:00"), correction_factor=None, baseline_stat="mean"):
     """
     Synchronizes any detector with machine logs, generates a synchronized 3-panel plot (handling optional time splits),
     and calculates statistical dose rates for stable frequency plateaus independently per split.
@@ -170,7 +170,12 @@ def analyze_and_plot_detector(df_det, df_mach, detector_name, dose_col, threshol
         
         mask_bg = (df_det['datetime'].dt.time >= start_time) & (df_det['datetime'].dt.time < end_time)
         if mask_bg.any():
-            baseline_value = df_det.loc[mask_bg, dose_col].mean()
+            if baseline_stat == "median":
+                # The PANDORA neutron dose has multiple spikes that disturb the baseline calculation, use median instead of mean
+                baseline_value = df_det.loc[mask_bg, dose_col].median()
+            else:
+                # Default to mean for all other detectors
+                baseline_value = df_det.loc[mask_bg, dose_col].mean()
             print(f"\n[*] Baseline calculated for {detector_name} ({start_bg} - {end_bg}): {baseline_value:.3f} µSv/h")
         else:
             print(f"\n[-] Warning: could not calculate baseline for {detector_name} in interval {start_bg} - {end_bg}.")
@@ -503,7 +508,8 @@ if __name__ == "__main__":
             ylim_plot=(-5, 1500),
             splits=None,
             baseline_range=("12:00", "13:00"),
-            correction_factor=None
+            correction_factor=None,
+            baseline_stat="median"
         )
         # 2. Analyze Pandora Gamma
         print("\n[->] Analyzing Pandora Gamma...")
@@ -516,7 +522,7 @@ if __name__ == "__main__":
             ylim_plot=(-1, 350),
             splits=None,
             baseline_range=("12:00", "13:00"),
-            correction_factor=None
+            correction_factor=None,
         )
     except Exception as e:
         print(f"[-] Failed to process PANDORA data: {e}")
