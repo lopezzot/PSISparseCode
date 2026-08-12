@@ -7,6 +7,7 @@
 - [LUPIN_data](LUPIN_data): Data for the LUPIN detector during the 2025 data taking.
 - [DRPS_data](DRPS_data): Data for the DRPS detectors during the 2025 data taking.
 - [NAUSICAA_data](NAUSICAA_data): Data for the NAUSICAA detector during the 2025 data taking.
+- [PANDORA_data](PANDORA_data): Data for the PANDORA detector during the 2025 data taking.
 - [MultiDetectorAnalysis.py](MultiDetectorAnalysis.py): Python code for the analysis at 10 and 25 Hz of the detectors used during the 2025 data taking.
 - [MultiDetectorResults](MultiDetectorResults): Directory containing plots created by the MultiDetectorAnalysis code.
 - [LUPIN_responsefolding](LUPIN_responsefolding): Code for analysis of the LUPIN detector response at the SwissFEL 2025 measurement campaign. It shows fluences, conversion functions from fluences to H*(10), and detector relative dose responses. It also calculates the corrections to apply to neutron dose measurements.
