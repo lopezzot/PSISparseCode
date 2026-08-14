@@ -359,6 +359,58 @@ def analyze_and_plot_detector(df_det, df_mach, detector_name, dose_col, threshol
         
     print("="*75 + "\n")
 
+def calculate_integrated_charge(df_mach, start_time_str, end_time_str):
+    """
+    Calculates the total integrated charge (in pC and Coulombs) delivered by SwissFEL
+    within a specified time interval, converts it to the number of primary electrons
+    for Monte Carlo (FLUKA) normalization, and counts the total delivered bunches.
+    """
+    # Create a copy to avoid modifying the original dataframe
+    df = df_mach.copy()
+
+    # Convert strings to time objects
+    start_t = pd.to_datetime(start_time_str).time()
+    end_t = pd.to_datetime(end_time_str).time()
+
+    # Create a mask for the specified time window
+    mask = (df['datetime'].dt.time >= start_t) & (df['datetime'].dt.time <= end_t)
+    df_window = df.loc[mask].copy()
+
+    if df_window.empty:
+        print(f"[-] No machine data found between {start_time_str} and {end_time_str}.")
+        return 0.0, 0.0, 0
+
+    # Calculate time difference in seconds between consecutive log points
+    df_window['dt_seconds'] = df_window['datetime'].diff().dt.total_seconds().fillna(0)
+
+    # Number of bunches in step = Frequency (Hz = bunches/second) * dt (seconds)
+    df_window['step_bunches'] = df_window['frequency_Hz'] * df_window['dt_seconds']
+    total_bunches = int(df_window['step_bunches'].sum())
+
+    # Total charge per step = Average Charge per Bunch (pC) * step_bunches
+    df_window['step_charge_pC'] = df_window['charge_pC'] * df_window['step_bunches']
+
+    # Integrate across the entire time window
+    total_charge_pC = df_window['step_charge_pC'].sum()
+    
+    # Convert to Coulombs (1 pC = 1e-12 C)
+    total_charge_C = total_charge_pC * 1e-12
+    
+    # Convert to number of primary electrons (elementary charge e = 1.602e-19 C)
+    elementary_charge = 1.602176634e-19
+    total_electrons = total_charge_C / elementary_charge
+
+    print("\n" + "="*75)
+    print("  INTEGRATED BEAM CHARGE ANALYSIS (FLUKA NORMALIZATION)")
+    print("="*75)
+    print(f"  Time Interval       : {start_time_str} - {end_time_str}")
+    print(f"  Total Bunches       : {total_bunches:,} ({total_bunches:.4e})")
+    print(f"  Total Charge (pC)   : {total_charge_pC:.2e} pC")
+    print(f"  Total Charge (C)    : {total_charge_C:.2e} C")
+    print(f"  Number of Primaries : {total_electrons:.4e} electrons")
+    print("="*75 + "\n")
+
+    return total_charge_pC, total_electrons, total_bunches
 
 # =============================================================================
 # --- 3. MAIN EXECUTION FLOW ---
@@ -526,3 +578,20 @@ if __name__ == "__main__":
         )
     except Exception as e:
         print(f"[-] Failed to process PANDORA data: {e}")
+
+    # -------------------------------------------------------------------------
+    # CALCULATE INTEGRATED CHARGE FOR FLUKA
+    # -------------------------------------------------------------------------
+    print("\n[*] Calculating integrated beam charge for passive dosimeters...")
+    try:
+        # Define the exact exposure window of your passive dosimeters
+        exposure_start = "15:00"
+        exposure_end = "18:00"
+        
+        total_pC, n_primaries, n_bunches = calculate_integrated_charge(
+            df_mach=df_machine,
+            start_time_str=exposure_start,
+            end_time_str=exposure_end
+        )
+    except Exception as e:
+        print(f"[-] Failed to calculate integrated charge: {e}")
