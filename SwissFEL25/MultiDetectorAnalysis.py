@@ -585,7 +585,7 @@ if __name__ == "__main__":
     print("\n[*] Calculating integrated beam charge for passive dosimeters...")
     try:
         # Define the exact exposure window of your passive dosimeters
-        exposure_start = "15:00"
+        exposure_start = "10:30"
         exposure_end = "18:00"
         
         total_pC, n_primaries, n_bunches = calculate_integrated_charge(
