@@ -5,7 +5,7 @@
 #include "globals.hh"
 
 namespace SimulationConfig {
-constexpr G4int NumberOfLayers = 30;
+constexpr G4int NumberOfLayers = 90;
 constexpr G4double LayerThickness = 5.0 * mm;
 constexpr G4double LayerSizeXY = 100.0 * mm;
 constexpr G4double LayerGap = 0.0 * mm;

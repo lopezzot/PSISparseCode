@@ -31,7 +31,7 @@ G4VPhysicalVolume *DetectorConstruction::Construct() {
       (SimulationConfig::NumberOfLayers - 1) * SimulationConfig::LayerGap;
 
   const G4double worldXY = 160.0 * mm;
-  const G4double worldZ = 400.0 * mm;
+  const G4double worldZ = 1200.0 * mm;
 
   auto *worldSolid =
       new G4Box("WorldSolid", worldXY / 2.0, worldXY / 2.0, worldZ / 2.0);

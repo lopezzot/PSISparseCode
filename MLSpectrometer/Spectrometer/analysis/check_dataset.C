@@ -14,7 +14,7 @@
 #include "TStyle.h"
 #include "TTree.h"
 
-constexpr int NumberOfLayers = 30;
+constexpr int NumberOfLayers = 90;
 constexpr int NumberOfEnergyBins = 100;
 
 constexpr double EnergyMin = 0.1;
