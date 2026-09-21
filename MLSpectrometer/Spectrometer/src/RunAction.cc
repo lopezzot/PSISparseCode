@@ -59,6 +59,9 @@ void RunAction::FillEvent(const G4Event *event,
   analysisManager->FillNtupleDColumn(3, eventAction.GetGeneratedMean() / MeV);
   analysisManager->FillNtupleDColumn(4, eventAction.GetGeneratedSigma() / MeV);
 
+  std::cout << eventAction.GetNumberOfPrimaryGammas() << std::endl;
+  std::cout << eventAction.GetTotalPrimaryEnergy() << std::endl;
+  std::cout << " ciao " << std::endl;
   fGammaSpectrum = eventAction.GetPrimarySpectrum();
   fLayerEdep = eventAction.GetLayerEdep();
 

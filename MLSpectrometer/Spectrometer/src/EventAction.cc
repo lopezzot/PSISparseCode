@@ -18,11 +18,6 @@ EventAction::EventAction(const DetectorConstruction *detector,
 
 void EventAction::BeginOfEventAction(const G4Event *) {
   std::fill(fLayerEdep.begin(), fLayerEdep.end(), 0.0);
-  ResetPrimarySpectrum();
-  fNumberOfPrimaryGammas = 0;
-  fTotalPrimaryEnergy = 0.0;
-  fGeneratedMean = 0.0;
-  fGeneratedSigma = 0.0;
 }
 
 void EventAction::EndOfEventAction(const G4Event *event) {
@@ -60,6 +55,15 @@ void EventAction::SetGeneratedSpectrumParameters(G4double mean,
 
 void EventAction::ResetPrimarySpectrum() {
   std::fill(fPrimarySpectrum.begin(), fPrimarySpectrum.end(), 0.0);
+}
+
+void EventAction::ResetPrimaryTruth() {
+  ResetPrimarySpectrum();
+
+  fNumberOfPrimaryGammas = 0;
+  fTotalPrimaryEnergy = 0.0;
+  fGeneratedMean = 0.0;
+  fGeneratedSigma = 0.0;
 }
 
 const std::vector<G4double> &EventAction::GetLayerEdep() const {

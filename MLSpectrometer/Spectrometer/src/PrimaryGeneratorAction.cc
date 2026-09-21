@@ -22,6 +22,9 @@ PrimaryGeneratorAction::PrimaryGeneratorAction(
 PrimaryGeneratorAction::~PrimaryGeneratorAction() { delete fParticleGun; }
 
 void PrimaryGeneratorAction::GeneratePrimaries(G4Event *event) {
+
+  fEventAction->ResetPrimaryTruth();
+
   const auto energies = fSpectrumGenerator->GenerateGammaEnergies(
       SimulationConfig::NumberOfPrimaryGammas);
 

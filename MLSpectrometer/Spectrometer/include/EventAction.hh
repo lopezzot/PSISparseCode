@@ -30,6 +30,8 @@ public:
   G4double GetGeneratedMean() const;
   G4double GetGeneratedSigma() const;
 
+  void ResetPrimaryTruth();
+
 private:
   const DetectorConstruction *fDetector = nullptr;
   RunAction *fRunAction = nullptr;
