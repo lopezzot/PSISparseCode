@@ -14,17 +14,17 @@ class SpectrumGenerator;
 
 class PrimaryGeneratorAction : public G4VUserPrimaryGeneratorAction {
 public:
-    PrimaryGeneratorAction(const DetectorConstruction* detector,
-                           EventAction* eventAction);
-    ~PrimaryGeneratorAction() override;
+  PrimaryGeneratorAction(const DetectorConstruction *detector,
+                         EventAction *eventAction);
+  ~PrimaryGeneratorAction() override;
 
-    void GeneratePrimaries(G4Event* event) override;
+  void GeneratePrimaries(G4Event *event) override;
 
 private:
-    const DetectorConstruction* fDetector = nullptr;
-    EventAction* fEventAction = nullptr;
-    G4ParticleGun* fParticleGun = nullptr;
-    std::unique_ptr<SpectrumGenerator> fSpectrumGenerator;
+  const DetectorConstruction *fDetector = nullptr;
+  EventAction *fEventAction = nullptr;
+  G4ParticleGun *fParticleGun = nullptr;
+  std::unique_ptr<SpectrumGenerator> fSpectrumGenerator;
 };
 
 #endif

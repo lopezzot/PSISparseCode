@@ -5,24 +5,20 @@
 #include "RunAction.hh"
 #include "SteppingAction.hh"
 
-ActionInitialization::ActionInitialization(const DetectorConstruction* detector)
-    : fDetector(detector)
-{
+ActionInitialization::ActionInitialization(const DetectorConstruction *detector)
+    : fDetector(detector) {}
+
+void ActionInitialization::BuildForMaster() const {
+  SetUserAction(new RunAction(fDetector));
 }
 
-void ActionInitialization::BuildForMaster() const
-{
-    SetUserAction(new RunAction(fDetector));
-}
+void ActionInitialization::Build() const {
+  auto *runAction = new RunAction(fDetector);
+  SetUserAction(runAction);
 
-void ActionInitialization::Build() const
-{
-    auto* runAction = new RunAction(fDetector);
-    SetUserAction(runAction);
+  auto *eventAction = new EventAction(fDetector, runAction);
+  SetUserAction(eventAction);
 
-    auto* eventAction = new EventAction(fDetector, runAction);
-    SetUserAction(eventAction);
-
-    SetUserAction(new PrimaryGeneratorAction(fDetector, eventAction));
-    SetUserAction(new SteppingAction(fDetector, eventAction));
+  SetUserAction(new PrimaryGeneratorAction(fDetector, eventAction));
+  SetUserAction(new SteppingAction(fDetector, eventAction));
 }
