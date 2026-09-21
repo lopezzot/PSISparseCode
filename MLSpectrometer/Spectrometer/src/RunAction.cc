@@ -10,6 +10,10 @@
 
 RunAction::RunAction(const DetectorConstruction *detector)
     : fDetector(detector) {
+
+  fLayerEdep.resize(SimulationConfig::NumberOfLayers);
+  fGammaSpectrum.resize(SimulationConfig::NumberOfEnergyBins);
+
   auto *analysisManager = G4AnalysisManager::Instance();
   analysisManager->SetDefaultFileType("root");
   analysisManager->SetVerboseLevel(1);
@@ -23,13 +27,10 @@ RunAction::RunAction(const DetectorConstruction *detector)
   analysisManager->CreateNtupleDColumn("generated_mean_MeV");
   analysisManager->CreateNtupleDColumn("generated_sigma_MeV");
 
-  for (G4int i = 0; i < SimulationConfig::NumberOfLayers; ++i) {
-    analysisManager->CreateNtupleDColumn("layer_" + std::to_string(i) + "_MeV");
-  }
+  // Vector columns
+  analysisManager->CreateNtupleDColumn("layer_edep_MeV", fLayerEdep);
 
-  for (G4int i = 0; i < SimulationConfig::NumberOfEnergyBins; ++i) {
-    analysisManager->CreateNtupleDColumn("gamma_bin_" + std::to_string(i));
-  }
+  analysisManager->CreateNtupleDColumn("gamma_spectrum", fGammaSpectrum);
 
   analysisManager->FinishNtuple();
 }
@@ -58,16 +59,8 @@ void RunAction::FillEvent(const G4Event *event,
   analysisManager->FillNtupleDColumn(3, eventAction.GetGeneratedMean() / MeV);
   analysisManager->FillNtupleDColumn(4, eventAction.GetGeneratedSigma() / MeV);
 
-  const auto &layerEdep = eventAction.GetLayerEdep();
-  for (G4int i = 0; i < SimulationConfig::NumberOfLayers; ++i) {
-    analysisManager->FillNtupleDColumn(5 + i, layerEdep[i] / MeV);
-  }
-
-  const auto &spectrum = eventAction.GetPrimarySpectrum();
-  const G4int firstSpectrumColumn = 5 + SimulationConfig::NumberOfLayers;
-  for (G4int i = 0; i < SimulationConfig::NumberOfEnergyBins; ++i) {
-    analysisManager->FillNtupleDColumn(firstSpectrumColumn + i, spectrum[i]);
-  }
+  fGammaSpectrum = eventAction.GetPrimarySpectrum();
+  fLayerEdep = eventAction.GetLayerEdep();
 
   analysisManager->AddNtupleRow();
 }

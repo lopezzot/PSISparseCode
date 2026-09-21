@@ -1,5 +1,5 @@
 # Spectrometer
-A simple Geant4 simulation needed to understand if a longitudinally segmented calorimeter can work as a spectrometer for pulsed gamma fields with machine learnign reconstruction.
+A simple Geant4 simulation needed to understand if a longitudinally segmented calorimeter can work as a spectrometer for pulsed gamma fields with machine learning reconstruction.
 
 ## Build, compile and execute
 1. source Geant4 env

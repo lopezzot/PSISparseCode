@@ -9,6 +9,8 @@ class EventAction;
 class G4Event;
 class G4Run;
 
+#include <vector>
+
 class RunAction : public G4UserRunAction {
 public:
   explicit RunAction(const DetectorConstruction *detector);
@@ -21,6 +23,8 @@ public:
 
 private:
   const DetectorConstruction *fDetector = nullptr;
+  std::vector<G4double> fLayerEdep;
+  std::vector<G4double> fGammaSpectrum;
 };
 
 #endif
