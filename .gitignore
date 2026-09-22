@@ -1,1 +1,8 @@
 .DS_Store
+*.swp
+*build*/
+*.png
+*.d
+*.so
+*.pcm
+*.venv/

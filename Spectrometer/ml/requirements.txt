@@ -1,0 +1,5 @@
+numpy==1.26.4
+matplotlib
+uproot
+torch==2.2.2
+scikit-learn

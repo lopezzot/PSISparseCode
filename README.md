@@ -1,7 +1,8 @@
-## A personal collection of codes used at PSI from June 2026 on
+## A personal collection of codes used at PSI from June 2026 onward
 
 - [SwissFEL25](SwissFEL25): Codes for data analysis and detector response folding at the SwissFEL25 measurement campaign.
 - [REMCounterTiming](REMCounterTiming): Code to simulate a REM counter signal at different neutron burst durations and repetition rates.
+- [Spectrometer](Spectrometer): Investigation code for a machine learning gamma spectrometer made of a longitudinally segmented calorimeter.
 
 ## A collection of presentations prepared at PSI
 
