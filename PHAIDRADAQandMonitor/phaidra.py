@@ -4,11 +4,12 @@
 Simple PhaiDRA logger acquisition GUI.
 
 The program:
-1. Creates a timestamped output file when START is pressed.
-2. Searches for the FT232R USB serial logger.
-3. Reads incoming logger lines at 9600 baud.
-4. Appends each received line to the current output file.
-5. Stops acquisition and closes the serial port when STOP is pressed.
+1. Searches for the FT232R USB serial logger when START is pressed.
+2. Opens the USB serial connection.
+3. Creates a timestamped output file after a successful connection.
+4. Reads incoming logger lines at 9600 baud.
+5. Appends each received line to the current output file.
+6. Stops acquisition and closes the serial port when STOP is pressed.
 """
 
 import threading
