@@ -60,9 +60,19 @@ class PhaiDRAApp:
         self.serial_connection = None
         self.output_file = None
 
+        # Store the acquisition start time.
+        self.acquisition_start_time = None
+
+        # Store the scheduled GUI update callback.
+        self.elapsed_after_id = None
+
         # Store GUI status text.
         self.status_var = tk.StringVar(value="Stopped")
         self.file_var = tk.StringVar(value="No active file")
+
+        # Store the acquisition start time and elapsed time shown in the GUI.
+        self.start_time_var = tk.StringVar(value="Not started")
+        self.elapsed_time_var = tk.StringVar(value="00:00:00")
 
         # Create the GUI controls.
         tk.Label(
@@ -104,6 +114,38 @@ class PhaiDRAApp:
         tk.Label(
             file_frame,
             textvariable=self.file_var,
+            font=("Helvetica", 12),
+        ).pack(side=tk.LEFT, padx=(5, 0))
+
+        # Create a frame for the acquisition timing information.
+        timing_frame = tk.Frame(self.root)
+        timing_frame.pack(pady=5)
+
+        # Create the acquisition start time label.
+        tk.Label(
+            timing_frame,
+            text="Acquisition start time:",
+            font=("Helvetica", 12),
+        ).pack(side=tk.LEFT)
+
+        # Display the acquisition start time.
+        tk.Label(
+            timing_frame,
+            textvariable=self.start_time_var,
+            font=("Helvetica", 12),
+        ).pack(side=tk.LEFT, padx=(5, 20))
+
+        # Create the elapsed time label.
+        tk.Label(
+            timing_frame,
+            text="Acquisition duration:",
+            font=("Helvetica", 12),
+        ).pack(side=tk.LEFT)
+
+        # Display the elapsed acquisition time.
+        tk.Label(
+            timing_frame,
+            textvariable=self.elapsed_time_var,
             font=("Helvetica", 12),
         ).pack(side=tk.LEFT, padx=(5, 0))
 
@@ -238,6 +280,26 @@ class PhaiDRAApp:
                self.show_error(f"Cannot create output file:\n\n{error}")
                return
 
+            # Store the acquisition start time after the logger connection succeeds.
+            self.acquisition_start_time = datetime.now()
+
+            # Update the acquisition start time shown in the GUI.
+            start_time = self.acquisition_start_time.strftime("%d/%m/%Y %H:%M:%S")
+
+            self.root.after(
+                0,
+                lambda: self.start_time_var.set(start_time),
+            )
+
+            # Reset the elapsed acquisition time.
+            self.root.after(
+                0,
+                lambda: self.elapsed_time_var.set("00:00:00"),
+            )
+
+            # Start updating the elapsed acquisition time every second.
+            self.root.after(0, self.update_acquisition_time)
+
             # Update the GUI with the newly created file name.
             self.root.after(
                  0,
@@ -308,8 +370,48 @@ class PhaiDRAApp:
         # Update the GUI immediately.
         self.status_var.set("Stopping...")
 
+    def update_acquisition_time(self):
+        """Update the elapsed acquisition time once per second."""
+
+        # Stop updating if there is no active acquisition.
+        if self.acquisition_start_time is None:
+            return
+
+        # Calculate the elapsed acquisition time.
+        elapsed = datetime.now() - self.acquisition_start_time
+
+        # Convert the elapsed time to total seconds.
+        total_seconds = int(elapsed.total_seconds())
+
+        # Calculate hours, minutes, and seconds.
+        hours = total_seconds // 3600
+        minutes = (total_seconds % 3600) // 60
+        seconds = total_seconds % 60
+
+        # Update the elapsed time shown in the GUI.
+        self.elapsed_time_var.set(
+            f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+        )
+
+        # Schedule the next update one second later.
+        self.elapsed_after_id = self.root.after(
+            1000,
+            self.update_acquisition_time,
+        )
+
     def acquisition_finished(self):
         """Restore the GUI to the stopped state after acquisition ends."""
+        # Cancel the periodic elapsed-time update.
+        if self.elapsed_after_id is not None:
+            self.root.after_cancel(self.elapsed_after_id)
+            self.elapsed_after_id = None
+
+        # Clear the acquisition start time.
+        self.acquisition_start_time = None
+
+        # Reset the elapsed time display.
+        self.elapsed_time_var.set("00:00:00")
+        
         # Re-enable START and disable STOP.
         self.start_button.config(state=tk.NORMAL)
         self.stop_button.config(state=tk.DISABLED)
