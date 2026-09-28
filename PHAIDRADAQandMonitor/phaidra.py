@@ -64,19 +64,41 @@ class PhaiDRAApp:
             font=("Helvetica", 18, "bold"),
         ).pack(pady=(20, 10))
 
+        # Create a frame for the status line.
+        status_frame = tk.Frame(self.root)
+        status_frame.pack(pady=5)
+
+        # Create the static "Status:" label.
         tk.Label(
-            self.root,
+            status_frame,
+            text="Status: ",
+            font=("Helvetica", 12, "bold"),
+        ).pack(side=tk.LEFT)
+
+        # Create the dynamic status label.
+        tk.Label(
+            status_frame,
             textvariable=self.status_var,
             font=("Helvetica", 12),
-        ).pack(pady=5)
+        ).pack(side=tk.LEFT, padx=(5, 0))
 
+        # Create a frame for the status line.
+        file_frame = tk.Frame(self.root)
+        file_frame.pack(pady=5)
+
+        # Create the static "Output file:" label.
         tk.Label(
-            self.root,
+            file_frame,
+            text="Output file: ",
+            font=("Helvetica", 12, "bold"),
+        ).pack(side=tk.LEFT)
+
+        # Create the dynamic file label.
+        tk.Label(
+            file_frame,
             textvariable=self.file_var,
-            wraplength=440,
-            justify="center",
-            font=("Helvetica", 10),
-        ).pack(pady=5)
+            font=("Helvetica", 12),
+        ).pack(side=tk.LEFT, padx=(5, 0))
 
         # Create and enable the START button.
         self.start_button = tk.Button(
@@ -154,7 +176,7 @@ class PhaiDRAApp:
         self.start_button.config(state=tk.DISABLED)
         self.stop_button.config(state=tk.NORMAL)
         self.status_var.set("Searching for logger...")
-        self.file_var.set(f"Connecting to logger...")
+        #self.file_var.set(f"Connecting to logger...")
 
         # Start the blocking serial work in a background thread.
         self.acquisition_thread = threading.Thread(
