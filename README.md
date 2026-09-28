@@ -3,6 +3,7 @@
 - [SwissFEL25](SwissFEL25): Codes for data analysis and detector response folding at the SwissFEL25 measurement campaign.
 - [REMCounterTiming](REMCounterTiming): Code to simulate a REM counter signal at different neutron burst durations and repetition rates.
 - [Spectrometer](Spectrometer): Investigation code for a machine learning gamma spectrometer made of a longitudinally segmented calorimeter.
+- [PHAIDRADAQandMonitor](PHAIDRADAQandMonitor): DAQ and monitoring system for the PHAIDRA facility at PSI.
 
 ## A collection of presentations prepared at PSI
 
