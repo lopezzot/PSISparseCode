@@ -41,9 +41,16 @@ class PhaiDRAApp:
         self.root = root
 
         # Configure the main window.
-        self.root.title("PhaiDRA DAQ and Monitor")
-        self.root.geometry("600x350")
-        self.root.resizable(False, False)
+        self.root.title("Phaidra DAQ and Monitor")
+
+        # Set a reasonable initial window size.
+        self.root.geometry("1000x700")
+
+        # Set a reasonable minimum size.
+        self.root.minsize(700, 500)
+
+        # Allow the user to resize the window with the mouse.
+        self.root.resizable(True, True)
 
         # Store the current acquisition thread and stop signal.
         self.acquisition_thread = None
