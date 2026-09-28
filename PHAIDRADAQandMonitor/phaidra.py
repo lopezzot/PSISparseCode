@@ -42,7 +42,7 @@ class PhaiDRAApp:
 
         # Configure the main window.
         self.root.title("PhaiDRA DAQ and Monitor")
-        self.root.geometry("480x260")
+        self.root.geometry("600x350")
         self.root.resizable(False, False)
 
         # Store the current acquisition thread and stop signal.
@@ -120,6 +120,13 @@ class PhaiDRAApp:
             state=tk.DISABLED,
         )
         self.stop_button.pack(pady=5)
+
+        # Create the contact information shown at the bottom of the window.
+        tk.Label(
+             self.root,
+             text="For problems/questions contact Lorenzo Pezzotti at lorenzo.pezzotti@psi.ch",
+             font=("Helvetica", 10),
+        ).pack(side=tk.BOTTOM, pady=(10, 15))
 
         # Make the window close safely.
         self.root.protocol("WM_DELETE_WINDOW", self.close_application)
