@@ -139,22 +139,13 @@ class PhaiDRAApp:
         return None
 
     def start_acquisition(self):
-        """Create the output file and start the logger acquisition thread."""
+        """Start the logger acquisition thread."""
         # Ignore START presses while an acquisition is already running.
         if self.acquisition_thread and self.acquisition_thread.is_alive():
             return
 
-        try:
-            # Create a fresh file using the START time.
-            self.create_output_file()
-        except FileExistsError:
-            # This is extremely unlikely because the filename contains seconds.
-            self.show_error("The output file already exists.")
-            return
-        except OSError as error:
-            # Report file-system errors before starting acquisition.
-            self.show_error(f"Cannot create output file:\n\n{error}")
-            return
+        # Reset the output file reference for the new acquisition.
+        self.output_file = None
 
         # Clear any previous stop request.
         self.stop_event.clear()
@@ -163,7 +154,7 @@ class PhaiDRAApp:
         self.start_button.config(state=tk.DISABLED)
         self.stop_button.config(state=tk.NORMAL)
         self.status_var.set("Searching for logger...")
-        self.file_var.set(f"File: {self.output_file.name}")
+        self.file_var.set(f"Connecting to logger...")
 
         # Start the blocking serial work in a background thread.
         self.acquisition_thread = threading.Thread(
@@ -196,6 +187,25 @@ class PhaiDRAApp:
                 parity=serial.PARITY_NONE,
                 stopbits=serial.STOPBITS_ONE,
                 timeout=READ_TIMEOUT,
+            )
+
+            # Create the output file only after the logger connection succeeds.
+            try:
+                # Create the output file only after the logger connection succeeds.
+                self.create_output_file()
+            except FileExistsError:
+                self.set_status("File error")
+                self.show_error("The output file already exists.")
+                return
+            except OSError as error:
+               self.set_status("File error")
+               self.show_error(f"Cannot create output file:\n\n{error}")
+               return
+
+            # Update the GUI with the newly created file name.
+            self.root.after(
+                 0,
+                 lambda: self.file_var.set(f"File: {self.output_file.name}"),
             )
 
             # Keep a reference so STOP can expose the connection state.
