@@ -72,6 +72,21 @@ class PhaiDRAApp:
         self.acquisition_thread = None
         self.stop_event = threading.Event()
 
+        # Store parsed logger data exchanged between the acquisition thread and GUI thread.
+        self.data_queue = queue.Queue() # the queue object is shared between the master and worker thread
+
+        # Store timestamps and values for each monitored channel.
+        self.channel_data = {
+            1: {"times": [], "values": []},
+            5: {"times": [], "values": []},
+            7: {"times": [], "values": []},
+            8: {"times": [], "values": []},
+        }
+        
+        # Store the Matplotlib axes and line objects for each monitored channel.
+        self.channel_axes = {}
+        self.channel_lines = {}
+
         # Store the current serial port and output file path.
         self.serial_connection = None
         self.output_file = None
@@ -196,6 +211,166 @@ class PhaiDRAApp:
         # Make the window close safely.
         self.root.protocol("WM_DELETE_WINDOW", self.close_application)
 
+        self.create_plots()
+
+        # Start the periodic GUI update loop.
+        self.root.after(100, self.process_data_queue)
+
+    def create_plots(self):
+        """Create the four monitoring plots and embed them in the GUI."""
+
+        # Create the frame that will contain the Matplotlib figure.
+        plot_frame = tk.Frame(self.root)
+        plot_frame.pack(
+            fill=tk.BOTH,
+            expand=True,
+            padx=10,
+            pady=10,
+        )
+
+        # Create one Matplotlib figure with four subplots.
+        self.figure = Figure(figsize=(10, 6))
+        axes = self.figure.subplots(2, 2)
+
+        # Define the monitored channels and their subplot positions.
+        channel_positions = {
+            1: axes[0, 0],
+            5: axes[0, 1],
+            7: axes[1, 0],
+            8: axes[1, 1],
+        }
+
+        # Create one plot for each monitored channel.
+        for channel, axis in channel_positions.items():
+            axis.set_title(f"Channel {channel}")
+            axis.set_ylabel("Counts")
+            axis.grid(True)
+
+            # Automatically choose a reasonable number of date/time ticks.
+            locator = mdates.AutoDateLocator(
+                minticks=3,
+                maxticks=5,
+            )
+
+            # Use a compact date/time representation.
+            formatter = mdates.ConciseDateFormatter(locator)
+
+            # Apply the locator and formatter to the X axis.
+            axis.xaxis.set_major_locator(locator)
+            axis.xaxis.set_major_formatter(formatter)
+
+            # Rotate the X-axis labels slightly for better readability.
+            axis.tick_params(axis="x", labelrotation=30)
+
+            # Create an empty line that will be updated later.
+            line, = axis.plot([], [])
+
+            self.channel_axes[channel] = axis
+            self.channel_lines[channel] = line
+
+        # Improve spacing between the four plots.
+        self.figure.tight_layout()
+
+        # Embed the Matplotlib figure inside the Tkinter window.
+        self.canvas = FigureCanvasTkAgg(
+            self.figure,
+            master=plot_frame,
+        )
+
+        self.canvas.draw()
+
+        # Make the canvas expand with the window.
+        self.canvas.get_tk_widget().pack(
+            fill=tk.BOTH,
+            expand=True,
+        )
+    def parse_logger_line(self, line):
+        """Parse one logger line and extract the timestamp and monitored channels."""
+
+        # Split the ASCII line into individual fields.
+        fields = line.split()
+
+        # Ignore malformed lines.
+        if len(fields) < 15:
+            return None
+
+        try:
+            # Parse the date and time reported by the logger.
+            timestamp = datetime.strptime(
+                f"{fields[1]} {fields[2]}",
+                "%d.%m.%y %H:%M:%S",
+            )
+
+            # Extract the requested channel counts.
+            channel_values = {
+                channel: int(fields[index])
+                for channel, index in CHANNEL_FIELDS.items()
+            }
+
+            return timestamp, channel_values
+
+        except (ValueError, IndexError):
+            # Ignore lines that cannot be parsed.
+            return None
+
+    def process_data_queue(self):
+        """Process new logger data and update all monitoring plots."""
+
+        # Process all data currently waiting in the queue.
+        while not self.data_queue.empty():
+            timestamp, channel_values = self.data_queue.get() # note that get() removes the data from the queue
+
+            # Add the new data point to every monitored channel.
+            for channel, value in channel_values.items():
+                self.channel_data[channel]["times"].append(timestamp)
+                self.channel_data[channel]["values"].append(value)
+
+        # Update the plots if new data is available.
+        if any(
+            self.channel_data[channel]["times"]
+            for channel in CHANNEL_FIELDS
+        ):
+            self.update_plots()
+
+        # Schedule the next queue check.
+        self.root.after(100, self.process_data_queue)
+
+    def update_plots(self):
+        """Update all monitoring plots with the latest acquisition data."""
+
+        # Update each monitored channel.
+        for channel in CHANNEL_FIELDS:
+            times = self.channel_data[channel]["times"]
+            values = self.channel_data[channel]["values"]
+
+            # Update the corresponding Matplotlib line.
+            self.channel_lines[channel].set_data(times, values)
+
+            # Automatically adjust the plot limits.
+            self.channel_axes[channel].relim()
+            self.channel_axes[channel].autoscale_view()
+
+        # Redraw the complete figure.
+        self.canvas.draw_idle()
+
+    def reset_plots(self):
+        """Clear all monitoring data and reset the four plots."""
+
+        # Clear stored data for every monitored channel.
+        for channel in CHANNEL_FIELDS:
+            self.channel_data[channel]["times"].clear()
+            self.channel_data[channel]["values"].clear()
+
+            # Remove all data from the corresponding plot line.
+            self.channel_lines[channel].set_data([], [])
+
+            # Reset the axes.
+            self.channel_axes[channel].relim()
+            self.channel_axes[channel].autoscale_view()
+
+        # Redraw the empty plots.
+        self.canvas.draw_idle()
+
     def create_output_file(self):
         """Create a new timestamped data file for the current acquisition."""
         # Use the current local date and time as the acquisition start time.
@@ -237,6 +412,9 @@ class PhaiDRAApp:
         # Ignore START presses while an acquisition is already running.
         if self.acquisition_thread and self.acquisition_thread.is_alive():
             return
+
+        # Clear the previous monitoring data.
+        self.reset_plots()
 
         # Reset the output file reference for the new acquisition.
         self.output_file = None
@@ -350,6 +528,13 @@ class PhaiDRAApp:
                     # Flush immediately so data is physically handed to the OS
                     # instead of remaining in Python's file buffer.
                     data_file.flush()
+
+                    # Parse the received logger line for monitoring data.
+                    parsed_data = self.parse_logger_line(line)
+
+                    # Add valid parsed data to the GUI queue.
+                    if parsed_data is not None:
+                        self.data_queue.put(parsed_data)
 
         except serial.SerialException as error:
             # Report serial communication failures.
