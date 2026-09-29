@@ -193,7 +193,7 @@ class PhaiDRAApp:
         tk.Label(
             timing_frame,
             text="Acquisition start time:",
-            font=("Helvetica", 12),
+            font=("Helvetica", 12, "bold"),
         ).pack(side=tk.LEFT)
 
         # Display the acquisition start time.
@@ -207,7 +207,7 @@ class PhaiDRAApp:
         tk.Label(
             timing_frame,
             text="Acquisition duration:",
-            font=("Helvetica", 12),
+            font=("Helvetica", 12, "bold"),
         ).pack(side=tk.LEFT)
 
         # Display the elapsed acquisition time.
