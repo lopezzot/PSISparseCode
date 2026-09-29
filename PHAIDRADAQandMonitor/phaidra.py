@@ -9,7 +9,8 @@ The program:
 3. Creates a timestamped output file after a successful connection.
 4. Reads incoming logger lines at 9600 baud.
 5. Appends each received line to the current output file.
-6. Stops acquisition and closes the serial port when STOP is pressed.
+6. Creates monitoring plots on the GUI
+7. Stops acquisition and closes the serial port when STOP is pressed.
 """
 
 import threading
@@ -21,6 +22,13 @@ from tkinter import messagebox
 import serial
 from serial.tools import list_ports
 
+import queue
+
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
+import matplotlib.dates as mdates
+
+import math
 
 # Serial communication settings used by the logger.
 BAUDRATE = 9600
@@ -29,6 +37,14 @@ READ_TIMEOUT = 1
 # FTDI FT232R USB UART identifiers observed for the logger.
 LOGGER_VID = 0x0403
 LOGGER_PID = 0x6001
+
+# These are the input channels (3.7,9,10) on the logger.
+CHANNEL_FIELDS = {
+    1: 3, # gamma detector
+    5: 7, # yellow neutron
+    7: 9, # white neutron
+    8: 10,# current
+}
 
 # Prefix used for acquisition files.
 FILE_PREFIX = "phaidra_data"
@@ -48,7 +64,7 @@ class PhaiDRAApp:
         self.root.geometry("1000x700")
 
         # Set a reasonable minimum size.
-        self.root.minsize(700, 500)
+        self.root.minsize(1200, 850)
 
         # Allow the user to resize the window with the mouse.
         self.root.resizable(True, True)
@@ -57,9 +73,30 @@ class PhaiDRAApp:
         self.acquisition_thread = None
         self.stop_event = threading.Event()
 
+        # Store a request to rotate the daily output file.
+        self.rotate_file_event = threading.Event()
+        
+        # Store parsed logger data exchanged between the acquisition thread and GUI thread.
+        self.data_queue = queue.Queue() # the queue object is shared between the master and worker thread
+
+        # Store timestamps and values for each monitored channel.
+        self.channel_data = {
+            1: {"times": [], "values": []},
+            5: {"times": [], "values": []},
+            7: {"times": [], "values": []},
+            8: {"times": [], "values": []},
+        }
+        
+        # Store the Matplotlib axes and line objects for each monitored channel.
+        self.plot_axes = {}
+        self.plot_lines = {}
+
         # Store the current serial port and output file path.
         self.serial_connection = None
         self.output_file = None
+
+        # Store the computer calendar date associated with the current daily file.
+        self.current_day = None
 
         # Store the acquisition start time.
         self.acquisition_start_time = None
@@ -75,12 +112,42 @@ class PhaiDRAApp:
         self.start_time_var = tk.StringVar(value="Not started")
         self.elapsed_time_var = tk.StringVar(value="00:00:00")
 
-        # Create the GUI controls.
-        tk.Label(
-            self.root,
+        # Create the header frame.
+        header_frame = tk.Frame(self.root)
+        header_frame.pack(
+            fill=tk.X,
+            padx=15,
+            pady=(10, 5),
+        )
+
+        # Load the PSI logo.
+        self.psi_logo = tk.PhotoImage(file="logo_psi.png")
+        # Reduce the logo size.
+        self.psi_logo = self.psi_logo.subsample(5, 5)
+
+        # Create the PSI logo label.
+        logo_label = tk.Label(
+            header_frame,
+            image=self.psi_logo,
+        )
+        logo_label.pack(
+            side=tk.LEFT,
+            anchor="nw",
+        )
+
+        # Create the application title.
+        title_label = tk.Label(
+            header_frame,
             text="Phaidra DAQ and Monitor",
             font=("Helvetica", 18, "bold"),
-        ).pack(pady=(20, 10))
+        )
+
+        # Keep the title centered in the header.
+        title_label.pack(
+            side=tk.LEFT,
+            expand=True,
+            padx=10,
+        )
 
         # Create a frame for the status line.
         status_frame = tk.Frame(self.root)
@@ -126,7 +193,7 @@ class PhaiDRAApp:
         tk.Label(
             timing_frame,
             text="Acquisition start time:",
-            font=("Helvetica", 12),
+            font=("Helvetica", 12, "bold"),
         ).pack(side=tk.LEFT)
 
         # Display the acquisition start time.
@@ -140,7 +207,7 @@ class PhaiDRAApp:
         tk.Label(
             timing_frame,
             text="Acquisition duration:",
-            font=("Helvetica", 12),
+            font=("Helvetica", 12, "bold"),
         ).pack(side=tk.LEFT)
 
         # Display the elapsed acquisition time.
@@ -180,6 +247,240 @@ class PhaiDRAApp:
 
         # Make the window close safely.
         self.root.protocol("WM_DELETE_WINDOW", self.close_application)
+
+        self.create_plots()
+
+        # Start the periodic GUI update loop.
+        self.root.after(100, self.process_data_queue)
+
+    def create_plots(self):
+        """Create the monitoring plots and embed them in the GUI."""
+
+        # Create the frame that will contain the Matplotlib figure.
+        plot_frame = tk.Frame(self.root)
+        plot_frame.pack(
+            fill=tk.BOTH,
+            expand=True,
+            padx=10,
+            pady=10,
+        )
+
+        # Create one Matplotlib figure with three subplots.
+        self.figure = Figure(figsize=(12, 4))
+        axes = self.figure.subplots(1, 3)
+
+        # Define the monitoring plots and their titles.
+        plot_definitions = {
+            "ratio_75": (
+                axes[0],
+                "Ratio of channel 7 and 5",
+                "Ratio",
+            ),
+            "uncertainty_75": (
+                axes[1],
+                "Relative uncertainty of 7/5",
+                "Relative uncertainty",
+            ),
+            "ratio_78": (
+                axes[2],
+                "Ratio of channel 7 and 8",
+                "Ratio",
+                ),
+        }
+
+        # Create one plot for each monitored quantity.
+        for plot_name, (axis, title, ylabel) in plot_definitions.items():
+            axis.set_title(title)
+            axis.set_ylabel(ylabel)
+            axis.grid(True)
+
+            # Automatically choose a reasonable number of date/time ticks.
+            locator = mdates.AutoDateLocator(
+                minticks=3,
+                maxticks=5,
+            )
+
+            # Use a compact date/time representation.
+            formatter = mdates.ConciseDateFormatter(locator)
+
+            # Apply the locator and formatter to the X axis.
+            axis.xaxis.set_major_locator(locator)
+            axis.xaxis.set_major_formatter(formatter)
+
+            # Rotate the X-axis labels slightly for better readability.
+            axis.tick_params(axis="x", labelrotation=30)
+
+            # Create an empty line that will be updated later.
+            line, = axis.plot([], [])
+
+            self.plot_axes[plot_name] = axis
+            self.plot_lines[plot_name] = line
+
+        # Improve spacing between the three plots.
+        self.figure.tight_layout()
+
+        # Embed the Matplotlib figure inside the Tkinter window.
+        self.canvas = FigureCanvasTkAgg(
+            self.figure,
+            master=plot_frame,
+        )
+
+        self.canvas.draw()
+
+        # Make the canvas expand with the window.
+        self.canvas.get_tk_widget().pack(
+            fill=tk.BOTH,
+            expand=True,
+        )
+
+    def parse_logger_line(self, line):
+        """Parse one logger line and extract the timestamp and monitored channels."""
+
+        # Split the ASCII line into individual fields.
+        fields = line.split()
+
+        # Ignore malformed lines.
+        if len(fields) < 15:
+            return None
+
+        try:
+            # Parse the date and time reported by the logger.
+            timestamp = datetime.strptime(
+                f"{fields[1]} {fields[2]}",
+                "%d.%m.%y %H:%M:%S",
+            )
+
+            # Extract the requested channel counts.
+            channel_values = {
+                channel: int(fields[index])
+                for channel, index in CHANNEL_FIELDS.items()
+            }
+
+            return timestamp, channel_values
+
+        except (ValueError, IndexError):
+            # Ignore lines that cannot be parsed.
+            return None
+
+    def process_data_queue(self):
+        """Process new logger data and update all monitoring plots."""
+
+        # Process all data currently waiting in the queue.
+        while not self.data_queue.empty():
+            timestamp, channel_values = self.data_queue.get() # note that get() removes the data from the queue
+
+            # Add the new data point to every monitored channel.
+            for channel, value in channel_values.items():
+                self.channel_data[channel]["times"].append(timestamp)
+                self.channel_data[channel]["values"].append(value)
+
+        # Update the plots if new data is available.
+        if any(
+            self.channel_data[channel]["times"]
+            for channel in CHANNEL_FIELDS
+        ):
+            self.update_plots()
+
+        # Schedule the next queue check.
+        self.root.after(100, self.process_data_queue)
+
+    def update_plots(self):
+        """Update all monitoring plots with the latest acquisition data."""
+
+        # Read the raw channel data used to calculate the monitoring quantities.
+        times = self.channel_data[7]["times"]
+        values_5 = self.channel_data[5]["values"]
+        values_7 = self.channel_data[7]["values"]
+        values_8 = self.channel_data[8]["values"]
+
+        # Calculate the three derived quantities.
+        ratio_75 = []
+        relative_uncertainty_75 = []
+        ratio_78 = []
+
+        for value_5, value_7, value_8 in zip(
+            values_5,
+            values_7,
+            values_8,
+        ):
+            # Calculate 7/5.
+            if value_5 > 0:
+                ratio = value_7 / value_5
+            else:
+                ratio = float("nan")
+
+            ratio_75.append(ratio)
+
+            # Calculate the relative uncertainty of 7/5.
+            # Assume independent Poisson counting statistics.
+            if value_5 > 0 and value_7 > 0:
+                relative_uncertainty = math.sqrt(
+                    1 / value_7 + 1 / value_5
+                )
+            else:
+                relative_uncertainty = float("nan")
+
+            relative_uncertainty_75.append(relative_uncertainty)
+
+            # Convert channel 8 counts to mA.
+            current_mA = value_8 / 1e6
+
+            # Calculate 7/8 after converting channel 8 to mA.
+            if current_mA > 0:
+                ratio = value_7 / current_mA
+            else:
+                ratio = float("nan")
+
+            ratio_78.append(ratio)
+
+        # Update the 7/5 ratio plot.
+        self.plot_lines["ratio_75"].set_data(
+            times,
+            ratio_75,
+        )
+
+        self.plot_axes["ratio_75"].relim()
+        self.plot_axes["ratio_75"].autoscale_view()
+
+        # Update the relative uncertainty plot.
+        self.plot_lines["uncertainty_75"].set_data(
+            times,
+            relative_uncertainty_75,
+        )
+
+        self.plot_axes["uncertainty_75"].relim()
+        self.plot_axes["uncertainty_75"].autoscale_view()
+
+        # Update the 7/8 ratio plot.
+        self.plot_lines["ratio_78"].set_data(
+            times,
+            ratio_78,
+        )
+
+        self.plot_axes["ratio_78"].relim()
+        self.plot_axes["ratio_78"].autoscale_view()
+
+        # Redraw the complete figure.
+        self.canvas.draw_idle()
+
+    def reset_plots(self):
+        """Clear all monitoring data and reset the monitoring plots."""
+
+        # Clear stored raw data for every acquired channel.
+        for channel in CHANNEL_FIELDS:
+            self.channel_data[channel]["times"].clear()
+            self.channel_data[channel]["values"].clear()
+
+        # Remove all data from the monitoring plot lines.
+        for plot_name in self.plot_lines:
+            self.plot_lines[plot_name].set_data([], [])
+
+            # Reset the corresponding axes.
+            self.plot_axes[plot_name].relim()
+            self.plot_axes[plot_name].autoscale_view()
+
+        # Redraw the empty plots.
+        self.canvas.draw_idle()
 
     def create_output_file(self):
         """Create a new timestamped data file for the current acquisition."""
@@ -223,17 +524,22 @@ class PhaiDRAApp:
         if self.acquisition_thread and self.acquisition_thread.is_alive():
             return
 
+        # Clear the previous monitoring data.
+        self.reset_plots()
+
         # Reset the output file reference for the new acquisition.
         self.output_file = None
 
         # Clear any previous stop request.
         self.stop_event.clear()
 
+        # Clear any previous daily file rotation request.
+        self.rotate_file_event.clear()
+
         # Update the GUI for the running state.
         self.start_button.config(state=tk.DISABLED)
         self.stop_button.config(state=tk.NORMAL)
         self.status_var.set("Searching for logger...")
-        #self.file_var.set(f"Connecting to logger...")
 
         # Start the blocking serial work in a background thread.
         self.acquisition_thread = threading.Thread(
@@ -281,6 +587,12 @@ class PhaiDRAApp:
                self.show_error(f"Cannot create output file:\n\n{error}")
                return
 
+            # Store the current computer calendar date for the daily file.
+            self.current_day = datetime.now().date()
+
+            # Start monitoring the computer calendar date.
+            self.root.after(1000, self.check_day_change)
+
             # Store the acquisition start time after the logger connection succeeds.
             self.acquisition_start_time = datetime.now()
 
@@ -313,10 +625,41 @@ class PhaiDRAApp:
             # Tell the GUI that acquisition is active.
             self.set_status(f"Acquiring from {port_name}")
 
-            # Open the timestamped output file in append mode.
-            with self.output_file.open("a", encoding="utf-8") as data_file:
+            # Open the current output file in append mode.
+            data_file = self.output_file.open(
+                "a",
+                encoding="utf-8",
+            )
+
+            try:
                 # Read until STOP is pressed.
                 while not self.stop_event.is_set():
+
+                    if self.rotate_file_event.is_set():
+                        old_file_name = self.output_file.name
+
+                        data_file.close()
+
+                        self.create_output_file()
+                        data_file = self.output_file.open("a", encoding="utf-8")
+
+                        new_file_name = self.output_file.name
+
+                        print(
+                            f"Midnight reached: closed {old_file_name}, "
+                            f"opened {new_file_name}"
+                        )
+
+                        self.rotate_file_event.clear()
+
+                        self.root.after(
+                            0,
+                            lambda name=new_file_name: self.file_var.set(
+                            f"Output file: {name}"
+                            )
+                        )
+
+                    # Read one line from the logger.
                     raw_data = serial_connection.readline()
 
                     # Continue waiting when no complete line is available yet.
@@ -324,18 +667,32 @@ class PhaiDRAApp:
                         continue
 
                     # Decode the logger output while preserving unexpected bytes.
-                    line = raw_data.decode("ascii", errors="replace").rstrip("\r\n")
+                    line = raw_data.decode(
+                        "ascii",
+                        errors="replace",
+                    ).rstrip("\r\n")
 
                     # Ignore empty lines.
                     if not line:
                         continue
 
-                    # Write exactly one logger line to the output file.
+                    # Write exactly one logger line to the current daily file.
                     data_file.write(line + "\n")
 
-                    # Flush immediately so data is physically handed to the OS
-                    # instead of remaining in Python's file buffer.
+                    # Flush immediately so the data is available on disk.
                     data_file.flush()
+
+                    # Parse the received logger line for monitoring data.
+                    parsed_data = self.parse_logger_line(line)
+
+                    # Add valid parsed data to the GUI queue.
+                    if parsed_data is not None:
+                         self.data_queue.put(parsed_data)
+
+            finally:
+                # Always close the current output file.
+                if not data_file.closed:
+                    data_file.close()
 
         except serial.SerialException as error:
             # Report serial communication failures.
@@ -410,6 +767,12 @@ class PhaiDRAApp:
         # Clear the acquisition start time.
         self.acquisition_start_time = None
 
+        # Clear the current daily acquisition date.
+        self.current_day = None
+
+        # Clear any pending daily file rotation request.
+        self.rotate_file_event.clear()
+
         # Reset the elapsed time display.
         self.elapsed_time_var.set("00:00:00")
         
@@ -433,6 +796,30 @@ class PhaiDRAApp:
             lambda: messagebox.showerror("PhaiDRA", text),
         )
 
+    def check_day_change(self):
+        """Check whether the computer has entered a new calendar day."""
+
+        # Stop checking when no acquisition is active.
+        if self.current_day is None:
+            return
+
+        # Read the current date from the computer clock.
+        today = datetime.now().date()
+
+        # Request a daily file rotation when the calendar day changes.
+        if today != self.current_day:
+            # Request the worker thread to rotate the output file.
+            self.rotate_file_event.set()
+
+            # Update the current day immediately.
+            self.current_day = today
+
+            # Clear the monitoring plots for the new day.
+            self.reset_plots()
+
+        # Check again one second later.
+        self.root.after(1000, self.check_day_change)
+    
     def close_application(self):
         """Stop acquisition, close resources, and terminate the GUI."""
         # Request the acquisition thread to stop.
@@ -448,6 +835,8 @@ class PhaiDRAApp:
 
         # Close the GUI.
         self.root.destroy()
+
+        print("Terminating Phaidra DAQ and Monitor system. Bye.")
 
 
 def main():

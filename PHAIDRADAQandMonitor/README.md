@@ -64,10 +64,11 @@ Upgrade `pip`:
 python -m pip install --upgrade pip
 ```
 
-Install `pyserial`:
+Install `pyserial` and `matplotlib`:
 
 ```bash
 python -m pip install pyserial
+python -m pip install matplotlib
 ```
 
 Tkinter is normally available with the standard Python installation.
