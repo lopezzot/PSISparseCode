@@ -233,7 +233,6 @@ class PhaiDRAApp:
         self.start_button.config(state=tk.DISABLED)
         self.stop_button.config(state=tk.NORMAL)
         self.status_var.set("Searching for logger...")
-        #self.file_var.set(f"Connecting to logger...")
 
         # Start the blocking serial work in a background thread.
         self.acquisition_thread = threading.Thread(
