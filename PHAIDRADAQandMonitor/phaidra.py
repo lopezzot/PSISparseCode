@@ -63,7 +63,7 @@ class PhaiDRAApp:
         self.root.geometry("1000x700")
 
         # Set a reasonable minimum size.
-        self.root.minsize(700, 500)
+        self.root.minsize(1200, 850)
 
         # Allow the user to resize the window with the mouse.
         self.root.resizable(True, True)
@@ -105,12 +105,42 @@ class PhaiDRAApp:
         self.start_time_var = tk.StringVar(value="Not started")
         self.elapsed_time_var = tk.StringVar(value="00:00:00")
 
-        # Create the GUI controls.
-        tk.Label(
-            self.root,
+        # Create the header frame.
+        header_frame = tk.Frame(self.root)
+        header_frame.pack(
+            fill=tk.X,
+            padx=15,
+            pady=(10, 5),
+        )
+
+        # Load the PSI logo.
+        self.psi_logo = tk.PhotoImage(file="logo_psi.png")
+        # Reduce the logo size.
+        self.psi_logo = self.psi_logo.subsample(5, 5)
+
+        # Create the PSI logo label.
+        logo_label = tk.Label(
+            header_frame,
+            image=self.psi_logo,
+        )
+        logo_label.pack(
+            side=tk.LEFT,
+            anchor="nw",
+        )
+
+        # Create the application title.
+        title_label = tk.Label(
+            header_frame,
             text="Phaidra DAQ and Monitor",
             font=("Helvetica", 18, "bold"),
-        ).pack(pady=(20, 10))
+        )
+
+        # Keep the title centered in the header.
+        title_label.pack(
+            side=tk.LEFT,
+            expand=True,
+            padx=10,
+        )
 
         # Create a frame for the status line.
         status_frame = tk.Frame(self.root)
