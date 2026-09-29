@@ -463,6 +463,8 @@ class PhaiDRAApp:
         # Close the GUI.
         self.root.destroy()
 
+        print("Terminating Phaidra DAQ and Monitor system. Bye.")
+
 
 def main():
     """Create the Tkinter application and start the GUI event loop."""
