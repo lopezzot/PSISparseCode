@@ -28,6 +28,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 import matplotlib.dates as mdates
 
+import math
 
 # Serial communication settings used by the logger.
 BAUDRATE = 9600
@@ -87,8 +88,8 @@ class PhaiDRAApp:
         }
         
         # Store the Matplotlib axes and line objects for each monitored channel.
-        self.channel_axes = {}
-        self.channel_lines = {}
+        self.plot_axes = {}
+        self.plot_lines = {}
 
         # Store the current serial port and output file path.
         self.serial_connection = None
@@ -253,7 +254,7 @@ class PhaiDRAApp:
         self.root.after(100, self.process_data_queue)
 
     def create_plots(self):
-        """Create the four monitoring plots and embed them in the GUI."""
+        """Create the monitoring plots and embed them in the GUI."""
 
         # Create the frame that will contain the Matplotlib figure.
         plot_frame = tk.Frame(self.root)
@@ -264,22 +265,33 @@ class PhaiDRAApp:
             pady=10,
         )
 
-        # Create one Matplotlib figure with four subplots.
-        self.figure = Figure(figsize=(10, 6))
-        axes = self.figure.subplots(2, 2)
+        # Create one Matplotlib figure with three subplots.
+        self.figure = Figure(figsize=(12, 4))
+        axes = self.figure.subplots(1, 3)
 
-        # Define the monitored channels and their subplot positions.
-        channel_positions = {
-            1: axes[0, 0],
-            5: axes[0, 1],
-            7: axes[1, 0],
-            8: axes[1, 1],
+        # Define the monitoring plots and their titles.
+        plot_definitions = {
+            "ratio_75": (
+                axes[0],
+                "Ratio of channel 7 and 5",
+                "Ratio",
+            ),
+            "uncertainty_75": (
+                axes[1],
+                "Relative uncertainty of 7/5",
+                "Relative uncertainty",
+            ),
+            "ratio_78": (
+                axes[2],
+                "Ratio of channel 7 and 8",
+                "Ratio",
+                ),
         }
 
-        # Create one plot for each monitored channel.
-        for channel, axis in channel_positions.items():
-            axis.set_title(f"Channel {channel}")
-            axis.set_ylabel("Counts")
+        # Create one plot for each monitored quantity.
+        for plot_name, (axis, title, ylabel) in plot_definitions.items():
+            axis.set_title(title)
+            axis.set_ylabel(ylabel)
             axis.grid(True)
 
             # Automatically choose a reasonable number of date/time ticks.
@@ -301,10 +313,10 @@ class PhaiDRAApp:
             # Create an empty line that will be updated later.
             line, = axis.plot([], [])
 
-            self.channel_axes[channel] = axis
-            self.channel_lines[channel] = line
+            self.plot_axes[plot_name] = axis
+            self.plot_lines[plot_name] = line
 
-        # Improve spacing between the four plots.
+        # Improve spacing between the three plots.
         self.figure.tight_layout()
 
         # Embed the Matplotlib figure inside the Tkinter window.
@@ -320,6 +332,7 @@ class PhaiDRAApp:
             fill=tk.BOTH,
             expand=True,
         )
+
     def parse_logger_line(self, line):
         """Parse one logger line and extract the timestamp and monitored channels."""
 
@@ -374,35 +387,97 @@ class PhaiDRAApp:
     def update_plots(self):
         """Update all monitoring plots with the latest acquisition data."""
 
-        # Update each monitored channel.
-        for channel in CHANNEL_FIELDS:
-            times = self.channel_data[channel]["times"]
-            values = self.channel_data[channel]["values"]
+        # Read the raw channel data used to calculate the monitoring quantities.
+        times = self.channel_data[7]["times"]
+        values_5 = self.channel_data[5]["values"]
+        values_7 = self.channel_data[7]["values"]
+        values_8 = self.channel_data[8]["values"]
 
-            # Update the corresponding Matplotlib line.
-            self.channel_lines[channel].set_data(times, values)
+        # Calculate the three derived quantities.
+        ratio_75 = []
+        relative_uncertainty_75 = []
+        ratio_78 = []
 
-            # Automatically adjust the plot limits.
-            self.channel_axes[channel].relim()
-            self.channel_axes[channel].autoscale_view()
+        for value_5, value_7, value_8 in zip(
+            values_5,
+            values_7,
+            values_8,
+        ):
+            # Calculate 7/5.
+            if value_5 > 0:
+                ratio = value_7 / value_5
+            else:
+                ratio = float("nan")
+
+            ratio_75.append(ratio)
+
+            # Calculate the relative uncertainty of 7/5.
+            # Assume independent Poisson counting statistics.
+            if value_5 > 0 and value_7 > 0:
+                relative_uncertainty = math.sqrt(
+                    1 / value_7 + 1 / value_5
+                )
+            else:
+                relative_uncertainty = float("nan")
+
+            relative_uncertainty_75.append(relative_uncertainty)
+
+            # Convert channel 8 counts to mA.
+            current_mA = value_8 / 1e6
+
+            # Calculate 7/8 after converting channel 8 to mA.
+            if current_mA > 0:
+                ratio = value_7 / current_mA
+            else:
+                ratio = float("nan")
+
+            ratio_78.append(ratio)
+
+        # Update the 7/5 ratio plot.
+        self.plot_lines["ratio_75"].set_data(
+            times,
+            ratio_75,
+        )
+
+        self.plot_axes["ratio_75"].relim()
+        self.plot_axes["ratio_75"].autoscale_view()
+
+        # Update the relative uncertainty plot.
+        self.plot_lines["uncertainty_75"].set_data(
+            times,
+            relative_uncertainty_75,
+        )
+
+        self.plot_axes["uncertainty_75"].relim()
+        self.plot_axes["uncertainty_75"].autoscale_view()
+
+        # Update the 7/8 ratio plot.
+        self.plot_lines["ratio_78"].set_data(
+            times,
+            ratio_78,
+        )
+
+        self.plot_axes["ratio_78"].relim()
+        self.plot_axes["ratio_78"].autoscale_view()
 
         # Redraw the complete figure.
         self.canvas.draw_idle()
 
     def reset_plots(self):
-        """Clear all monitoring data and reset the four plots."""
+        """Clear all monitoring data and reset the monitoring plots."""
 
-        # Clear stored data for every monitored channel.
+        # Clear stored raw data for every acquired channel.
         for channel in CHANNEL_FIELDS:
             self.channel_data[channel]["times"].clear()
             self.channel_data[channel]["values"].clear()
 
-            # Remove all data from the corresponding plot line.
-            self.channel_lines[channel].set_data([], [])
+        # Remove all data from the monitoring plot lines.
+        for plot_name in self.plot_lines:
+            self.plot_lines[plot_name].set_data([], [])
 
-            # Reset the axes.
-            self.channel_axes[channel].relim()
-            self.channel_axes[channel].autoscale_view()
+            # Reset the corresponding axes.
+            self.plot_axes[plot_name].relim()
+            self.plot_axes[plot_name].autoscale_view()
 
         # Redraw the empty plots.
         self.canvas.draw_idle()
