@@ -9,7 +9,8 @@ The program:
 3. Creates a timestamped output file after a successful connection.
 4. Reads incoming logger lines at 9600 baud.
 5. Appends each received line to the current output file.
-6. Stops acquisition and closes the serial port when STOP is pressed.
+6. Creates monitoring plots on the GUI
+7. Stops acquisition and closes the serial port when STOP is pressed.
 """
 
 import threading
@@ -21,6 +22,12 @@ from tkinter import messagebox
 import serial
 from serial.tools import list_ports
 
+import queue
+
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
+import matplotlib.dates as mdates
+
 
 # Serial communication settings used by the logger.
 BAUDRATE = 9600
@@ -29,6 +36,14 @@ READ_TIMEOUT = 1
 # FTDI FT232R USB UART identifiers observed for the logger.
 LOGGER_VID = 0x0403
 LOGGER_PID = 0x6001
+
+# These are the input channels (3.7,9,10) on the logger.
+CHANNEL_FIELDS = {
+    1: 3,
+    5: 7,
+    7: 9,
+    8: 10,
+}
 
 # Prefix used for acquisition files.
 FILE_PREFIX = "phaidra_data"
