@@ -560,32 +560,28 @@ class PhaiDRAApp:
                 # Read until STOP is pressed.
                 while not self.stop_event.is_set():
 
-                    # Rotate the output file when the computer enters a new day.
                     if self.rotate_file_event.is_set():
+                        old_file_name = self.output_file.name
 
-                        # Close the previous day's file.
                         data_file.close()
 
-                        # Create a new output file.
                         self.create_output_file()
+                        data_file = self.output_file.open("a", encoding="utf-8")
 
-                        # Open the new output file.
-                        data_file = self.output_file.open(
-                            "a",
-                            encoding="utf-8",
+                        new_file_name = self.output_file.name
+
+                        print(
+                            f"Midnight reached: closed {old_file_name}, "
+                            f"opened {new_file_name}"
                         )
 
-                        # Clear the rotation request.
                         self.rotate_file_event.clear()
-
-                        # Update the file name shown in the GUI.
-                        file_name = self.output_file.name
 
                         self.root.after(
                             0,
-                            lambda name=file_name: self.file_var.set(
-                                f"Output file: {name}"
-                            ),
+                            lambda name=new_file_name: self.file_var.set(
+                            f"Output file: {name}"
+                            )
                         )
 
                     # Read one line from the logger.
