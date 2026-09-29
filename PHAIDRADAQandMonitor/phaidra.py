@@ -39,10 +39,10 @@ LOGGER_PID = 0x6001
 
 # These are the input channels (3.7,9,10) on the logger.
 CHANNEL_FIELDS = {
-    1: 3,
-    5: 7,
-    7: 9,
-    8: 10,
+    1: 3, # gamma detector
+    5: 7, # yellow neutron
+    7: 9, # white neutron
+    8: 10,# current
 }
 
 # Prefix used for acquisition files.
@@ -72,6 +72,9 @@ class PhaiDRAApp:
         self.acquisition_thread = None
         self.stop_event = threading.Event()
 
+        # Store a request to rotate the daily output file.
+        self.rotate_file_event = threading.Event()
+        
         # Store parsed logger data exchanged between the acquisition thread and GUI thread.
         self.data_queue = queue.Queue() # the queue object is shared between the master and worker thread
 
@@ -90,6 +93,9 @@ class PhaiDRAApp:
         # Store the current serial port and output file path.
         self.serial_connection = None
         self.output_file = None
+
+        # Store the computer calendar date associated with the current daily file.
+        self.current_day = None
 
         # Store the acquisition start time.
         self.acquisition_start_time = None
@@ -452,6 +458,9 @@ class PhaiDRAApp:
         # Clear any previous stop request.
         self.stop_event.clear()
 
+        # Clear any previous daily file rotation request.
+        self.rotate_file_event.clear()
+
         # Update the GUI for the running state.
         self.start_button.config(state=tk.DISABLED)
         self.stop_button.config(state=tk.NORMAL)
@@ -503,6 +512,12 @@ class PhaiDRAApp:
                self.show_error(f"Cannot create output file:\n\n{error}")
                return
 
+            # Store the current computer calendar date for the daily file.
+            self.current_day = datetime.now().date()
+
+            # Start monitoring the computer calendar date.
+            self.root.after(1000, self.check_day_change)
+
             # Store the acquisition start time after the logger connection succeeds.
             self.acquisition_start_time = datetime.now()
 
@@ -535,10 +550,45 @@ class PhaiDRAApp:
             # Tell the GUI that acquisition is active.
             self.set_status(f"Acquiring from {port_name}")
 
-            # Open the timestamped output file in append mode.
-            with self.output_file.open("a", encoding="utf-8") as data_file:
+            # Open the current output file in append mode.
+            data_file = self.output_file.open(
+                "a",
+                encoding="utf-8",
+            )
+
+            try:
                 # Read until STOP is pressed.
                 while not self.stop_event.is_set():
+
+                    # Rotate the output file when the computer enters a new day.
+                    if self.rotate_file_event.is_set():
+
+                        # Close the previous day's file.
+                        data_file.close()
+
+                        # Create a new output file.
+                        self.create_output_file()
+
+                        # Open the new output file.
+                        data_file = self.output_file.open(
+                            "a",
+                            encoding="utf-8",
+                        )
+
+                        # Clear the rotation request.
+                        self.rotate_file_event.clear()
+
+                        # Update the file name shown in the GUI.
+                        file_name = self.output_file.name
+
+                        self.root.after(
+                            0,
+                            lambda name=file_name: self.file_var.set(
+                                f"Output file: {name}"
+                            ),
+                        )
+
+                    # Read one line from the logger.
                     raw_data = serial_connection.readline()
 
                     # Continue waiting when no complete line is available yet.
@@ -546,17 +596,19 @@ class PhaiDRAApp:
                         continue
 
                     # Decode the logger output while preserving unexpected bytes.
-                    line = raw_data.decode("ascii", errors="replace").rstrip("\r\n")
+                    line = raw_data.decode(
+                        "ascii",
+                        errors="replace",
+                    ).rstrip("\r\n")
 
                     # Ignore empty lines.
                     if not line:
                         continue
 
-                    # Write exactly one logger line to the output file.
+                    # Write exactly one logger line to the current daily file.
                     data_file.write(line + "\n")
 
-                    # Flush immediately so data is physically handed to the OS
-                    # instead of remaining in Python's file buffer.
+                    # Flush immediately so the data is available on disk.
                     data_file.flush()
 
                     # Parse the received logger line for monitoring data.
@@ -564,7 +616,12 @@ class PhaiDRAApp:
 
                     # Add valid parsed data to the GUI queue.
                     if parsed_data is not None:
-                        self.data_queue.put(parsed_data)
+                         self.data_queue.put(parsed_data)
+
+            finally:
+                # Always close the current output file.
+                if not data_file.closed:
+                    data_file.close()
 
         except serial.SerialException as error:
             # Report serial communication failures.
@@ -639,6 +696,12 @@ class PhaiDRAApp:
         # Clear the acquisition start time.
         self.acquisition_start_time = None
 
+        # Clear the current daily acquisition date.
+        self.current_day = None
+
+        # Clear any pending daily file rotation request.
+        self.rotate_file_event.clear()
+
         # Reset the elapsed time display.
         self.elapsed_time_var.set("00:00:00")
         
@@ -662,6 +725,30 @@ class PhaiDRAApp:
             lambda: messagebox.showerror("PhaiDRA", text),
         )
 
+    def check_day_change(self):
+        """Check whether the computer has entered a new calendar day."""
+
+        # Stop checking when no acquisition is active.
+        if self.current_day is None:
+            return
+
+        # Read the current date from the computer clock.
+        today = datetime.now().date()
+
+        # Request a daily file rotation when the calendar day changes.
+        if today != self.current_day:
+            # Request the worker thread to rotate the output file.
+            self.rotate_file_event.set()
+
+            # Update the current day immediately.
+            self.current_day = today
+
+            # Clear the monitoring plots for the new day.
+            self.reset_plots()
+
+        # Check again one second later.
+        self.root.after(1000, self.check_day_change)
+    
     def close_application(self):
         """Stop acquisition, close resources, and terminate the GUI."""
         # Request the acquisition thread to stop.
