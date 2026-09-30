@@ -102,6 +102,9 @@ class PhaiDRAApp:
         self.acquisition_thread = None
         self.stop_event = threading.Event()
 
+        # Store flag is the program is closing
+        self.closing = False
+
         # Store a request to rotate the daily output file.
         self.rotate_file_event = threading.Event()
 
@@ -758,7 +761,8 @@ class PhaiDRAApp:
             self.serial_connection = None
 
             # Restore the GUI controls on the main GUI thread.
-            self.root.after(0, self.acquisition_finished)
+            if not self.closing:  # is STOP is pressed, not if GUI is closed
+                self.root.after(0, self.acquisition_finished)
 
     def stop_acquisition(self):
         """Request acquisition stop and allow the serial read to finish."""
@@ -860,6 +864,8 @@ class PhaiDRAApp:
 
     def close_application(self):
         """Stop acquisition, close resources, and terminate the GUI."""
+        # Flag program is closing
+        self.closing = True
         # Request the acquisition thread to stop.
         self.stop_event.set()
 
