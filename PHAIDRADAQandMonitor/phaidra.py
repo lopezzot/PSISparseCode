@@ -304,21 +304,24 @@ class PhaiDRAApp:
                 axes[0],
                 f"Ratio of channel 7 and 5\n({CHANNEL_NAMES[7]} / {CHANNEL_NAMES[5]})",
                 "Ratio",
+                "blue",
             ),
             "uncertainty_75": (
                 axes[1],
                 f"Relative uncertainty of 7/5\n({CHANNEL_NAMES[7]} / {CHANNEL_NAMES[5]})",
                 "Relative uncertainty",
+                "red",
             ),
             "ratio_78": (
                 axes[2],
                 f"Ratio of channel 7 and 8\n({CHANNEL_NAMES[7]} / {CHANNEL_NAMES[8]})",
                 "Ratio",
+                "green"
             ),
         }
 
         # Create one plot for each monitored quantity.
-        for plot_name, (axis, title, ylabel) in plot_definitions.items():
+        for plot_name, (axis, title, ylabel, color) in plot_definitions.items():
             axis.set_title(title)
             axis.set_ylabel(ylabel)
             axis.grid(True)
@@ -340,7 +343,7 @@ class PhaiDRAApp:
             axis.tick_params(axis="x", labelrotation=30)
 
             # Create an empty line that will be updated later.
-            line, = axis.plot([], [])
+            line, = axis.plot([], [], color=color, marker="o")
 
             self.plot_axes[plot_name] = axis
             self.plot_lines[plot_name] = line
