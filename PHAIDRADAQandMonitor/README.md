@@ -1,6 +1,8 @@
-# PGAIDRA DAQ and Monitor
+# PHAIDRA DAQ and Monitor
 
-Simple Python GUI application for acquiring text data from the Phaidra logger over USB/serial.
+Phaidra DAQ and Monitor is a Python application for acquiring data from the Phaidra logger via USB/serial.
+It records the raw logger data in timestamped daily files and provides real-time monitoring of channel ratios and their relative uncertainty.
+At each daily file rollover, and when acquisition is stopped, the completed file are copied to a configured network drive.
 
 The application uses:
 
@@ -13,12 +15,11 @@ The application uses:
 ```sh
 python phaidra.py
 ```
-
-### Options:
+Options:
 ```sh
 python phaidra.py --dontsaveondrive
 ```
-turns off automatic backup on network drive
+Turns off automatic backup on network drive.
 
 ## 1. Requirements
 
