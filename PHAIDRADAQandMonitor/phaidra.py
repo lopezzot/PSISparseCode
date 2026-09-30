@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Simple PhaiDRA logger acquisition GUI.
+Simple PHAIDRA logger acquisition GUI.
 
 The program:
 1. Searches for the FT232R USB serial logger when START is pressed.
@@ -49,10 +49,18 @@ LOGGER_PID = 0x6001
 
 # These are the input channels (3.7,9,10) on the logger.
 CHANNEL_FIELDS = {
-    1: 3, # gamma detector
-    5: 7, # yellow neutron
-    7: 9, # white neutron
-    8: 10,# current
+    1: 3, # IGT5
+    5: 7, # LB6411|PB
+    7: 9, # SMART LINUS
+    8: 10,# HIPA Current
+}
+
+# These are the input channels names
+CHANNEL_NAMES = {
+    1: "IGT5",
+    5: "LB6411|PB",
+    7: "SMART LINUS",
+    8: "HIPA Current",
 }
 
 # Prefix used for acquisition files.
@@ -79,7 +87,7 @@ class PhaiDRAApp:
         self.root = root
 
         # Configure the main window.
-        self.root.title("Phaidra DAQ and Monitor")
+        self.root.title("PHAIDRA DAQ and Monitor")
 
         # Set a reasonable initial window size.
         self.root.geometry("1000x700")
@@ -159,7 +167,7 @@ class PhaiDRAApp:
         # Create the application title.
         title_label = tk.Label(
             header_frame,
-            text="Phaidra DAQ and Monitor",
+            text="PHAIDRA DAQ and Monitor",
             font=("Helvetica", 18, "bold"),
         )
 
@@ -294,19 +302,19 @@ class PhaiDRAApp:
         plot_definitions = {
             "ratio_75": (
                 axes[0],
-                "Ratio of channel 7 and 5",
+                f"Ratio of channel 7 and 5\n({CHANNEL_NAMES[7]} / {CHANNEL_NAMES[5]})",
                 "Ratio",
             ),
             "uncertainty_75": (
                 axes[1],
-                "Relative uncertainty of 7/5",
+                f"Relative uncertainty of 7/5\n({CHANNEL_NAMES[7]} / {CHANNEL_NAMES[5]})",
                 "Relative uncertainty",
             ),
             "ratio_78": (
                 axes[2],
-                "Ratio of channel 7 and 8",
+                f"Ratio of channel 7 and 8\n({CHANNEL_NAMES[7]} / {CHANNEL_NAMES[8]})",
                 "Ratio",
-                ),
+            ),
         }
 
         # Create one plot for each monitored quantity.
@@ -868,7 +876,7 @@ class PhaiDRAApp:
         # Close the GUI.
         self.root.destroy()
 
-        print("Terminating Phaidra DAQ and Monitor system. Bye.")
+        print("Terminating PHAIDRA DAQ and Monitor system. Bye.")
 
 
 def main():
