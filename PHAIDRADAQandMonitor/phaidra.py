@@ -29,6 +29,15 @@ from matplotlib.figure import Figure
 import matplotlib.dates as mdates
 
 import math
+import shutil
+import argparse
+import tempfile
+
+# parser options
+# --dontsaveondrive will deactivate the backup on disk of closed files
+parser = argparse.ArgumentParser()
+parser.add_argument("--dontsaveondrive", action="store_false", default=True)
+SAVE_ON_DRIVE = parser.parse_args().dontsaveondrive
 
 # Serial communication settings used by the logger.
 BAUDRATE = 9600
@@ -49,6 +58,18 @@ CHANNEL_FIELDS = {
 # Prefix used for acquisition files.
 FILE_PREFIX = "phaidra_data"
 
+# Destination directory for daily backup files.
+BACKUP_DIR = Path("/psi.ch/.cifs-server/fs02.psi.ch/ea_messdaten/phaidra/2026/") # this is where the backup disk is reachable
+
+# Check that the netword drive is reachable, if not, deactivate automatic backup and throw a warning
+if SAVE_ON_DRIVE:
+    try:
+        with tempfile.NamedTemporaryFile(dir=BACKUP_DIR):
+            pass
+    except OSError as error:
+        SAVE_ON_DRIVE = False
+        print(f"WARNING: Cannot access/write to backup drive {BACKUP_DIR}: {error}")
+        print("WARNING: Saving to drive disabled. You can continue working locally.")
 
 class PhaiDRAApp:
     """Main GUI application and acquisition controller."""
@@ -636,9 +657,15 @@ class PhaiDRAApp:
                 while not self.stop_event.is_set():
 
                     if self.rotate_file_event.is_set():
-                        old_file_name = self.output_file.name
+                        old_file = self.output_file
+                        old_file_name = old_file.name
 
                         data_file.close()
+
+                        # Copy the closed daily file to the backup drive.
+                        if SAVE_ON_DRIVE:
+                            shutil.copy2(old_file, BACKUP_DIR / old_file.name)
+                            print(f"Copied {self.output_file.name} to drive.")
 
                         self.create_output_file()
                         data_file = self.output_file.open("a", encoding="utf-8")
@@ -693,6 +720,11 @@ class PhaiDRAApp:
                 # Always close the current output file.
                 if not data_file.closed:
                     data_file.close()
+
+                # Copy the completed file to the backup drive.
+                if SAVE_ON_DRIVE:
+                    shutil.copy2(self.output_file, BACKUP_DIR / self.output_file.name)
+                    print(f"Copied {self.output_file.name} to drive.")
 
         except serial.SerialException as error:
             # Report serial communication failures.

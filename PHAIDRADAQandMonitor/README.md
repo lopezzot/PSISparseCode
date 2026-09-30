@@ -9,6 +9,17 @@ The application uses:
 - `pyserial` for USB/serial communication
 - a virtual environment (`venv`) for dependency isolation
 
+## Usage:
+```sh
+python phaidra.py
+```
+
+### Options:
+```sh
+python phaidra.py --dontsaveondrive
+```
+turns off automatic backup on network drive
+
 ## 1. Requirements
 
 The logger must appear as a serial USB device.
