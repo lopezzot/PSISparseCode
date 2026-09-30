@@ -30,6 +30,13 @@ import matplotlib.dates as mdates
 
 import math
 import shutil
+import argparse
+
+# parser options
+# --dontsaveondrive will deactivate the backup on disk of closed files
+parser = argparse.ArgumentParser()
+parser.add_argument("--dontsaveondrive", action="store_false", default=True)
+SAVE_ON_DRIVE = parser.parse_args().dontsaveondrive
 
 # Serial communication settings used by the logger.
 BAUDRATE = 9600
@@ -646,7 +653,8 @@ class PhaiDRAApp:
                         data_file.close()
 
                         # Copy the closed daily file to the backup drive.
-                        shutil.copy2(old_file, BACKUP_DIR / old_file.name)
+                        if SAVE_ON_DRIVE:
+                            shutil.copy2(old_file, BACKUP_DIR / old_file.name)
 
                         self.create_output_file()
                         data_file = self.output_file.open("a", encoding="utf-8")
