@@ -865,7 +865,8 @@ class PhaiDRAApp:
 
         # Wait briefly for the acquisition thread to finish.
         if self.acquisition_thread and self.acquisition_thread.is_alive():
-            self.acquisition_thread.join(timeout=2)
+            print("Waiting for acquisition thread to finish...")
+            self.acquisition_thread.join()
 
         # Close the serial connection if it is still open.
         if self.serial_connection is not None and self.serial_connection.is_open:
