@@ -29,6 +29,7 @@ from matplotlib.figure import Figure
 import matplotlib.dates as mdates
 
 import math
+import shutil
 
 # Serial communication settings used by the logger.
 BAUDRATE = 9600
@@ -48,6 +49,9 @@ CHANNEL_FIELDS = {
 
 # Prefix used for acquisition files.
 FILE_PREFIX = "phaidra_data"
+
+# Destination directory for daily backup files.
+BACKUP_DIR = Path("/path/to/drive") # this is where the backup disk is reachable
 
 
 class PhaiDRAApp:
@@ -636,9 +640,13 @@ class PhaiDRAApp:
                 while not self.stop_event.is_set():
 
                     if self.rotate_file_event.is_set():
-                        old_file_name = self.output_file.name
+                        old_file = self.output_file
+                        old_file_name = old_file.name
 
                         data_file.close()
+
+                        # Copy the closed daily file to the backup drive.
+                        shutil.copy2(old_file, BACKUP_DIR / old_file.name)
 
                         self.create_output_file()
                         data_file = self.output_file.open("a", encoding="utf-8")
