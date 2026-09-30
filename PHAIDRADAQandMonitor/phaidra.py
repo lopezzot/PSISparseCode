@@ -44,19 +44,19 @@ READ_TIMEOUT = 1
 LOGGER_VID = 0x0403
 LOGGER_PID = 0x6001
 
-# These are the input channels (3.7,9,10) on the logger.
+# These are the input channels (1,5,7,8) on the logger.
 CHANNEL_FIELDS = {
     1: 3,  # IGT5
-    5: 7,  # LB6411|PB
-    7: 9,  # SMART LINUS
+    5: 7,  # SMART LINUS
+    7: 9,  # LB6411|Pb
     8: 10,  # HIPA Current
 }
 
 # These are the input channels names
 CHANNEL_NAMES = {
     1: "IGT5",
-    5: "LB6411|PB",
-    7: "SMART LINUS",
+    5: "SMART LINUS",
+    7: "LB6411|Pb",
     8: "HIPA Current",
 }
 
