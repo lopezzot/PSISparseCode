@@ -1,7 +1,7 @@
 .DS_Store
 *.swp
 *build*/
-*.png
+SwissFEL25/*.png
 *.d
 *.so
 *.pcm
