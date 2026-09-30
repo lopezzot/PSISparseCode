@@ -655,6 +655,7 @@ class PhaiDRAApp:
                         # Copy the closed daily file to the backup drive.
                         if SAVE_ON_DRIVE:
                             shutil.copy2(old_file, BACKUP_DIR / old_file.name)
+                            print(f"Copied {self.output_file.name} to drive.")
 
                         self.create_output_file()
                         data_file = self.output_file.open("a", encoding="utf-8")
@@ -713,6 +714,7 @@ class PhaiDRAApp:
                 # Copy the completed file to the backup drive.
                 if SAVE_ON_DRIVE:
                     shutil.copy2(self.output_file, BACKUP_DIR / self.output_file.name)
+                    print(f"Copied {self.output_file.name} to drive.")
 
         except serial.SerialException as error:
             # Report serial communication failures.
