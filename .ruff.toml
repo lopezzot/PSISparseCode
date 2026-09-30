@@ -1,0 +1,36 @@
+# --- GLOBAL SETTINGS ---
+# 88 is the standard line length limit imposed by Black/PEP 8
+line-length = 88
+# 4 spaces for indentation (Python standard)
+indent-width = 4
+# Target Python version to allow Ruff to use the correct syntax features
+target-version = "py310"
+
+# --- FORMATTING RULES (The clang-format equivalent) ---
+[format]
+# Use double quotes for strings ("") instead of single quotes ('')
+quote-style = "double"
+# Use spaces for indentation, not tabs
+indent-style = "space"
+# Handle line endings based on the operating system
+line-ending = "auto"
+# Respect the "magic trailing comma" (expands collections over multiple lines)
+skip-magic-trailing-comma = false
+# Automatically format Python code snippets inside docstrings
+docstring-code-format = true
+
+# --- LINTING RULES (Logical code cleanup) ---
+[lint]
+# Rules to apply:
+# E, W = Style Errors and Warnings (PEP 8)
+# F    = Pyflakes (finds unused variables, missing imports, etc.)
+# I    = isort (automatically sorts and groups import statements)
+select = ["E", "F", "W", "I"]
+ignore = ["E501"]  # Disable length check
+
+# Directories or files to always ignore
+exclude = [
+    ".git",
+    ".venv",
+    "__pycache__",
+]

@@ -13,25 +13,22 @@ The program:
 7. Stops acquisition and closes the serial port when STOP is pressed.
 """
 
+import argparse
+import math
+import queue
+import shutil
+import tempfile
 import threading
+import tkinter as tk
 from datetime import datetime
 from pathlib import Path
-import tkinter as tk
 from tkinter import messagebox
 
+import matplotlib.dates as mdates
 import serial
-from serial.tools import list_ports
-
-import queue
-
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
-import matplotlib.dates as mdates
-
-import math
-import shutil
-import argparse
-import tempfile
+from serial.tools import list_ports
 
 # parser options
 # --dontsaveondrive will deactivate the backup on disk of closed files
@@ -49,10 +46,10 @@ LOGGER_PID = 0x6001
 
 # These are the input channels (3.7,9,10) on the logger.
 CHANNEL_FIELDS = {
-    1: 3, # IGT5
-    5: 7, # LB6411|PB
-    7: 9, # SMART LINUS
-    8: 10,# HIPA Current
+    1: 3,  # IGT5
+    5: 7,  # LB6411|PB
+    7: 9,  # SMART LINUS
+    8: 10,  # HIPA Current
 }
 
 # These are the input channels names
@@ -67,7 +64,9 @@ CHANNEL_NAMES = {
 FILE_PREFIX = "phaidra_data"
 
 # Destination directory for daily backup files.
-BACKUP_DIR = Path("/psi.ch/.cifs-server/fs02.psi.ch/ea_messdaten/phaidra/2026/") # this is where the backup disk is reachable
+BACKUP_DIR = Path(
+    "/psi.ch/.cifs-server/fs02.psi.ch/ea_messdaten/phaidra/2026/"
+)  # this is where the backup disk is reachable
 
 # Check that the netword drive is reachable, if not, deactivate automatic backup and throw a warning
 if SAVE_ON_DRIVE:
@@ -78,6 +77,7 @@ if SAVE_ON_DRIVE:
         SAVE_ON_DRIVE = False
         print(f"WARNING: Cannot access/write to backup drive {BACKUP_DIR}: {error}")
         print("WARNING: Saving to drive disabled. You can continue working locally.")
+
 
 class PhaiDRAApp:
     """Main GUI application and acquisition controller."""
@@ -104,9 +104,11 @@ class PhaiDRAApp:
 
         # Store a request to rotate the daily output file.
         self.rotate_file_event = threading.Event()
-        
+
         # Store parsed logger data exchanged between the acquisition thread and GUI thread.
-        self.data_queue = queue.Queue() # the queue object is shared between the master and worker thread
+        self.data_queue = (
+            queue.Queue()
+        )  # the queue object is shared between the master and worker thread
 
         # Store timestamps and values for each monitored channel.
         self.channel_data = {
@@ -115,7 +117,7 @@ class PhaiDRAApp:
             7: {"times": [], "values": []},
             8: {"times": [], "values": []},
         }
-        
+
         # Store the Matplotlib axes and line objects for each monitored channel.
         self.plot_axes = {}
         self.plot_lines = {}
@@ -269,9 +271,9 @@ class PhaiDRAApp:
 
         # Create the contact information shown at the bottom of the window.
         tk.Label(
-             self.root,
-             text="For problems/questions contact Lorenzo Pezzotti at lorenzo.pezzotti@psi.ch",
-             font=("Helvetica", 10),
+            self.root,
+            text="For problems/questions contact Lorenzo Pezzotti at lorenzo.pezzotti@psi.ch",
+            font=("Helvetica", 10),
         ).pack(side=tk.BOTTOM, pady=(10, 15))
 
         # Make the window close safely.
@@ -316,7 +318,7 @@ class PhaiDRAApp:
                 axes[2],
                 f"Ratio of channel 7 and 8\n({CHANNEL_NAMES[7]} / {CHANNEL_NAMES[8]})",
                 "Ratio",
-                "green"
+                "green",
             ),
         }
 
@@ -343,7 +345,7 @@ class PhaiDRAApp:
             axis.tick_params(axis="x", labelrotation=30)
 
             # Create an empty line that will be updated later.
-            line, = axis.plot([], [], color=color, marker="o")
+            (line,) = axis.plot([], [], color=color, marker="o")
 
             self.plot_axes[plot_name] = axis
             self.plot_lines[plot_name] = line
@@ -384,8 +386,7 @@ class PhaiDRAApp:
 
             # Extract the requested channel counts.
             channel_values = {
-                channel: int(fields[index])
-                for channel, index in CHANNEL_FIELDS.items()
+                channel: int(fields[index]) for channel, index in CHANNEL_FIELDS.items()
             }
 
             return timestamp, channel_values
@@ -399,7 +400,9 @@ class PhaiDRAApp:
 
         # Process all data currently waiting in the queue.
         while not self.data_queue.empty():
-            timestamp, channel_values = self.data_queue.get() # note that get() removes the data from the queue
+            timestamp, channel_values = (
+                self.data_queue.get()
+            )  # note that get() removes the data from the queue
 
             # Add the new data point to every monitored channel.
             for channel, value in channel_values.items():
@@ -407,10 +410,7 @@ class PhaiDRAApp:
                 self.channel_data[channel]["values"].append(value)
 
         # Update the plots if new data is available.
-        if any(
-            self.channel_data[channel]["times"]
-            for channel in CHANNEL_FIELDS
-        ):
+        if any(self.channel_data[channel]["times"] for channel in CHANNEL_FIELDS):
             self.update_plots()
 
         # Schedule the next queue check.
@@ -446,9 +446,7 @@ class PhaiDRAApp:
             # Calculate the relative uncertainty of 7/5.
             # Assume independent Poisson counting statistics.
             if value_5 > 0 and value_7 > 0:
-                relative_uncertainty = math.sqrt(
-                    1 / value_7 + 1 / value_5
-                )
+                relative_uncertainty = math.sqrt(1 / value_7 + 1 / value_5)
             else:
                 relative_uncertainty = float("nan")
 
@@ -615,9 +613,9 @@ class PhaiDRAApp:
                 self.show_error("The output file already exists.")
                 return
             except OSError as error:
-               self.set_status("File error")
-               self.show_error(f"Cannot create output file:\n\n{error}")
-               return
+                self.set_status("File error")
+                self.show_error(f"Cannot create output file:\n\n{error}")
+                return
 
             # Store the current computer calendar date for the daily file.
             self.current_day = datetime.now().date()
@@ -647,8 +645,8 @@ class PhaiDRAApp:
 
             # Update the GUI with the newly created file name.
             self.root.after(
-                 0,
-                 lambda: self.file_var.set(f"File: {self.output_file.name}"),
+                0,
+                lambda: self.file_var.set(f"File: {self.output_file.name}"),
             )
 
             # Keep a reference so STOP can expose the connection state.
@@ -666,7 +664,6 @@ class PhaiDRAApp:
             try:
                 # Read until STOP is pressed.
                 while not self.stop_event.is_set():
-
                     if self.rotate_file_event.is_set():
                         old_file = self.output_file
                         old_file_name = old_file.name
@@ -693,8 +690,8 @@ class PhaiDRAApp:
                         self.root.after(
                             0,
                             lambda name=new_file_name: self.file_var.set(
-                            f"Output file: {name}"
-                            )
+                                f"Output file: {name}"
+                            ),
                         )
 
                     # Read one line from the logger.
@@ -725,7 +722,7 @@ class PhaiDRAApp:
 
                     # Add valid parsed data to the GUI queue.
                     if parsed_data is not None:
-                         self.data_queue.put(parsed_data)
+                        self.data_queue.put(parsed_data)
 
             finally:
                 # Always close the current output file.
@@ -790,9 +787,7 @@ class PhaiDRAApp:
         seconds = total_seconds % 60
 
         # Update the elapsed time shown in the GUI.
-        self.elapsed_time_var.set(
-            f"{hours:02d}:{minutes:02d}:{seconds:02d}"
-        )
+        self.elapsed_time_var.set(f"{hours:02d}:{minutes:02d}:{seconds:02d}")
 
         # Schedule the next update one second later.
         self.elapsed_after_id = self.root.after(
@@ -818,7 +813,7 @@ class PhaiDRAApp:
 
         # Reset the elapsed time display.
         self.elapsed_time_var.set("00:00:00")
-        
+
         # Re-enable START and disable STOP.
         self.start_button.config(state=tk.NORMAL)
         self.stop_button.config(state=tk.DISABLED)
@@ -862,7 +857,7 @@ class PhaiDRAApp:
 
         # Check again one second later.
         self.root.after(1000, self.check_day_change)
-    
+
     def close_application(self):
         """Stop acquisition, close resources, and terminate the GUI."""
         # Request the acquisition thread to stop.

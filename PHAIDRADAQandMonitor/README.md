@@ -155,3 +155,11 @@ The output file will be created inside:
 ```text
 ~/phaidra/
 ```
+
+## Optionals
+
+To lint and format
+```sh
+ruff check --fix phaidra.py
+ruff format phaidra.py
+```
