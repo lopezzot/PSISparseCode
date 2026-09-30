@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Simple PhaiDRA logger acquisition GUI.
+Simple PHAIDRA logger acquisition GUI.
 
 The program:
 1. Searches for the FT232R USB serial logger when START is pressed.
@@ -87,7 +87,7 @@ class PhaiDRAApp:
         self.root = root
 
         # Configure the main window.
-        self.root.title("Phaidra DAQ and Monitor")
+        self.root.title("PHAIDRA DAQ and Monitor")
 
         # Set a reasonable initial window size.
         self.root.geometry("1000x700")
@@ -167,7 +167,7 @@ class PhaiDRAApp:
         # Create the application title.
         title_label = tk.Label(
             header_frame,
-            text="Phaidra DAQ and Monitor",
+            text="PHAIDRA DAQ and Monitor",
             font=("Helvetica", 18, "bold"),
         )
 
@@ -876,7 +876,7 @@ class PhaiDRAApp:
         # Close the GUI.
         self.root.destroy()
 
-        print("Terminating Phaidra DAQ and Monitor system. Bye.")
+        print("Terminating PHAIDRA DAQ and Monitor system. Bye.")
 
 
 def main():
