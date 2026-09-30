@@ -31,6 +31,7 @@ import matplotlib.dates as mdates
 import math
 import shutil
 import argparse
+import tempfile
 
 # parser options
 # --dontsaveondrive will deactivate the backup on disk of closed files
@@ -59,6 +60,16 @@ FILE_PREFIX = "phaidra_data"
 
 # Destination directory for daily backup files.
 BACKUP_DIR = Path("/psi.ch/.cifs-server/fs02.psi.ch/ea_messdaten/phaidra/2026/") # this is where the backup disk is reachable
+
+# Check that the netword drive is reachable, if not, deactivate automatic backup and throw a warning
+if SAVE_ON_DRIVE:
+    try:
+        with tempfile.NamedTemporaryFile(dir=BACKUP_DIR):
+            pass
+    except OSError as error:
+        SAVE_ON_DRIVE = False
+        print(f"WARNING: Cannot access/write to backup drive {BACKUP_DIR}: {error}")
+        print("WARNING: Saving to drive disabled. You can continue working locally.")
 
 class PhaiDRAApp:
     """Main GUI application and acquisition controller."""
