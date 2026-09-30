@@ -58,8 +58,7 @@ CHANNEL_FIELDS = {
 FILE_PREFIX = "phaidra_data"
 
 # Destination directory for daily backup files.
-BACKUP_DIR = Path("/path/to/drive") # this is where the backup disk is reachable
-
+BACKUP_DIR = Path("/psi.ch/.cifs-server/fs02.psi.ch/ea_messdaten/phaidra/2026/") # this is where the backup disk is reachable
 
 class PhaiDRAApp:
     """Main GUI application and acquisition controller."""
