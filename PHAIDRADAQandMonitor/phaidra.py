@@ -710,6 +710,10 @@ class PhaiDRAApp:
                 if not data_file.closed:
                     data_file.close()
 
+                # Copy the completed file to the backup drive.
+                if SAVE_ON_DRIVE:
+                    shutil.copy2(self.output_file, BACKUP_DIR / self.output_file.name)
+
         except serial.SerialException as error:
             # Report serial communication failures.
             self.set_status("Serial error")
