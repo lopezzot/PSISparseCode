@@ -24,6 +24,7 @@ A simple Geant4 simulation needed to understand if a longitudinally segmented ca
 ## Run the ML reconstruction
 1. Create a python venv
    ```sh
+   cd ml
    python3 -m venv .venv
    source .venv/bin/activate
    pip install -r requirements.txt
