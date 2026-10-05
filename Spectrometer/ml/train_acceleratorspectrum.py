@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 import matplotlib.pyplot as plt
 import os
+import argparse
 
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
@@ -13,7 +14,19 @@ from sklearn.preprocessing import StandardScaler
 # Configuration
 # ============================================================
 
-ROOT_FILE = "layer_signals.root"
+parser = argparse.ArgumentParser(
+    description="Train the gamma spectrum reconstruction network."
+)
+
+parser.add_argument(
+    "--input",
+    required=True,
+    help="Input ROOT file containing the detector dataset.",
+)
+
+args = parser.parse_args()
+
+ROOT_FILE = args.input
 TREE_NAME = "LayerSignals"
 
 N_LAYERS = 180
