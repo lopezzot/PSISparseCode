@@ -1,7 +1,7 @@
 .DS_Store
 *.swp
 *build*/
-SwissFEL25/*.png
+Spectrometer/*/*.png
 *.d
 *.so
 *.pcm
