@@ -16,11 +16,11 @@ from sklearn.preprocessing import StandardScaler
 ROOT_FILE = "../../build/accelerator_dataset.root"
 TREE_NAME = "LayerSignals"
 
-N_LAYERS = 90
-N_BINS = 100
+N_LAYERS = 180
+N_BINS = 50
 
 ENERGY_MIN = 0.1
-ENERGY_MAX = 100.0
+ENERGY_MAX = 500.0
 
 RANDOM_SEED = 42
 

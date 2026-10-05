@@ -14,11 +14,11 @@
 #include "TStyle.h"
 #include "TTree.h"
 
-constexpr int NumberOfLayers = 90;
-constexpr int NumberOfEnergyBins = 100;
+constexpr int NumberOfLayers = 180;
+constexpr int NumberOfEnergyBins = 50;
 
 constexpr double EnergyMin = 0.1;
-constexpr double EnergyMax = 100.0;
+constexpr double EnergyMax = 500.0;
 
 void check_dataset(const char *filename = "layer_signals.root") {
   TFile *file = TFile::Open(filename, "READ");
