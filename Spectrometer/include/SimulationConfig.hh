@@ -56,8 +56,8 @@ constexpr G4double AcceleratorPeakEnergyMin = 1.0 * MeV;
 constexpr G4double AcceleratorPeakEnergyMax = 450.0 * MeV;
 
 // Peak width.
-constexpr G4double AcceleratorPeakSigmaMin = 0.2 * MeV;
-constexpr G4double AcceleratorPeakSigmaMax = 3.0 * MeV;
+constexpr G4double AcceleratorPeakSigmaMin = 0.1 * MeV;
+constexpr G4double AcceleratorPeakSigmaMax = 10.0 * MeV;
 
 // Relative peak amplitude.
 constexpr G4double AcceleratorPeakAmplitudeMin = 0.2;
