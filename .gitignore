@@ -2,6 +2,8 @@
 *.swp
 *build*/
 Spectrometer/*/*.png
+Spectrometer/ml/plots_accelerator/*
+*.root
 *.d
 *.so
 *.pcm
