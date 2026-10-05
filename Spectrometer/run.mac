@@ -6,4 +6,5 @@
 /event/verbose 0
 /tracking/verbose 0
 #
-/run/beamOn 10
+# Standard event size for a training set production: 10k events
+/run/beamOn 10000

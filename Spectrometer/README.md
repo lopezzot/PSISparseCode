@@ -20,6 +20,11 @@ A simple Geant4 simulation needed to understand if a longitudinally segmented ca
    ```sh
    ./Spectrometer run.mac
    ```
+5. To insect the simulation output
+   ```sh
+   cd analysis
+   root -l 'check_dataset.C("path-to/layer_signals.root")'
+   ```
 
 ## Run the ML reconstruction
 1. Create a python venv

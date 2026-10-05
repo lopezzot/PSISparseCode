@@ -16,7 +16,7 @@
 
 namespace SimulationConfig {
 
-constexpr G4int NumberOfLayers = 90;
+constexpr G4int NumberOfLayers = 180;
 constexpr G4double LayerThickness = 5.0 * mm;
 constexpr G4double LayerSizeXY = 100.0 * mm;
 constexpr G4double LayerGap = 0.0 * mm;
@@ -25,9 +25,9 @@ constexpr G4double LayerGap = 0.0 * mm;
 // Energy spectrum
 // --------------------------------------------------
 
-constexpr G4int NumberOfEnergyBins = 100;
+constexpr G4int NumberOfEnergyBins = 50;
 constexpr G4double EnergyMin = 0.1 * MeV;
-constexpr G4double EnergyMax = 100.0 * MeV;
+constexpr G4double EnergyMax = 500.0 * MeV;
 
 // --------------------------------------------------
 // Gaussian spectrum parameters
@@ -53,11 +53,11 @@ constexpr G4int AcceleratorNumberOfPeaksMax = 1;
 
 // Peak energy range.
 constexpr G4double AcceleratorPeakEnergyMin = 1.0 * MeV;
-constexpr G4double AcceleratorPeakEnergyMax = 80.0 * MeV;
+constexpr G4double AcceleratorPeakEnergyMax = 450.0 * MeV;
 
 // Peak width.
-constexpr G4double AcceleratorPeakSigmaMin = 0.2 * MeV;
-constexpr G4double AcceleratorPeakSigmaMax = 3.0 * MeV;
+constexpr G4double AcceleratorPeakSigmaMin = 0.1 * MeV;
+constexpr G4double AcceleratorPeakSigmaMax = 10.0 * MeV;
 
 // Relative peak amplitude.
 constexpr G4double AcceleratorPeakAmplitudeMin = 0.2;
@@ -76,8 +76,8 @@ constexpr G4double AcceleratorContinuumTurnOnMin = 2.0 * MeV;
 constexpr G4double AcceleratorContinuumTurnOnMax = 8.0 * MeV;
 
 // High-energy exponential cutoff.
-constexpr G4double AcceleratorContinuumCutoffMin = 50.0 * MeV;
-constexpr G4double AcceleratorContinuumCutoffMax = 100.0 * MeV;
+constexpr G4double AcceleratorContinuumCutoffMin = 200.0 * MeV;
+constexpr G4double AcceleratorContinuumCutoffMax = 500.0 * MeV;
 
 // --------------------------------------------------
 // Primary statistics

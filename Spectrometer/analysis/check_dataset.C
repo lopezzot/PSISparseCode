@@ -9,18 +9,23 @@
 
 #include "TCanvas.h"
 #include "TFile.h"
+#include "TGaxis.h"
 #include "TH1D.h"
+#include "TLatex.h"
 #include "TPaveText.h"
 #include "TStyle.h"
 #include "TTree.h"
 
-constexpr int NumberOfLayers = 90;
-constexpr int NumberOfEnergyBins = 100;
+constexpr int NumberOfLayers = 180;
+constexpr int NumberOfEnergyBins = 50;
 
 constexpr double EnergyMin = 0.1;
-constexpr double EnergyMax = 100.0;
+constexpr double EnergyMax = 500.0;
+
+constexpr double LayerThicknessCm = 0.5;
 
 void check_dataset(const char *filename = "layer_signals.root") {
+
   TFile *file = TFile::Open(filename, "READ");
 
   if (!file || file->IsZombie()) {
@@ -76,121 +81,145 @@ void check_dataset(const char *filename = "layer_signals.root") {
       continue;
     }
 
+    // Check vector dimensions
+    if (layerEdep->size() != NumberOfLayers) {
+      std::cerr << "Warning: event " << event << " has " << layerEdep->size()
+                << " layers instead of " << NumberOfLayers << std::endl;
+    }
+
+    if (gammaSpectrum->size() != NumberOfEnergyBins) {
+      std::cerr << "Warning: event " << event << " has "
+                << gammaSpectrum->size() << " energy bins instead of "
+                << NumberOfEnergyBins << std::endl;
+    }
+
     std::cout << "Event " << event << " | N_gamma = " << nPrimaryGammas
-              << " | E_primary = " << totalPrimaryEnergy << " MeV"
-              << " | mu = " << generatedMean << " MeV"
-              << " | sigma = " << generatedSigma << " MeV" << std::endl;
+              << " | E_primary = " << totalPrimaryEnergy << " MeV" << std::endl;
 
     // ============================================================
-    // Primary gamma spectrum
+    // Event canvas: primary spectrum + longitudinal energy deposition
     // ============================================================
 
-    {
-      TCanvas canvas(Form("cSpectrum_%d", event), "Primary gamma spectrum",
-                     1000, 700);
+    TCanvas canvas(Form("cEvent_%d", event), "Event overview", 1000, 1100);
 
-      // Leave enough space at the top for the information box.
-      canvas.SetTopMargin(0.16);
+    canvas.Divide(1, 2);
 
-      TH1D spectrum("spectrum", "", NumberOfEnergyBins, EnergyMin, EnergyMax);
+    // ============================================================
+    // Top pad: primary gamma spectrum
+    // ============================================================
 
-      for (size_t i = 0; i < gammaSpectrum->size(); ++i) {
+    canvas.cd(1);
 
-        spectrum.SetBinContent(static_cast<int>(i) + 1, gammaSpectrum->at(i));
-      }
+    gPad->SetTopMargin(0.12);
+    gPad->SetBottomMargin(0.04);
 
-      spectrum.GetXaxis()->SetTitle("Primary gamma energy [MeV]");
+    TH1D spectrum("spectrum", "", NumberOfEnergyBins, EnergyMin, EnergyMax);
 
-      spectrum.GetYaxis()->SetTitle("Number of gammas");
+    for (size_t i = 0; i < gammaSpectrum->size() &&
+                       i < static_cast<size_t>(NumberOfEnergyBins);
+         ++i) {
 
-      spectrum.SetLineWidth(2);
-
-      // Draw the histogram FIRST.
-      spectrum.Draw("HIST");
-
-      // Draw the event information AFTER the histogram.
-      TPaveText info(0.25, 0.92, 0.75, 0.995, "NDC");
-
-      info.SetFillStyle(0);
-      info.SetBorderSize(0);
-      info.SetTextAlign(22);
-      info.SetTextSize(0.035);
-
-      info.AddText(Form("Event %d   #mu = %.2f MeV   #sigma = %.2f MeV", event,
-                        generatedMean, generatedSigma));
-
-      info.Draw();
-
-      canvas.Modified();
-      canvas.Update();
-
-      std::ostringstream outputName;
-
-      outputName << "event_" << std::setw(3) << std::setfill('0') << event
-                 << "_spectrum.png";
-
-      canvas.SaveAs(outputName.str().c_str());
-
-      std::cout << "Saved: " << outputName.str() << std::endl;
+      spectrum.SetBinContent(static_cast<int>(i) + 1, gammaSpectrum->at(i));
     }
 
+    spectrum.GetXaxis()->SetTitle("Primary gamma energy [MeV]");
+
+    spectrum.GetYaxis()->SetTitle("Number of gammas");
+
+    spectrum.SetLineWidth(2);
+
+    spectrum.Draw("HIST");
+
+    // Event information
+    TPaveText info(0.25, 0.93, 0.75, 0.995, "NDC");
+
+    info.SetFillStyle(0);
+    info.SetBorderSize(0);
+    info.SetTextAlign(22);
+    info.SetTextSize(0.035);
+
+    info.AddText(Form("Event %d   N_{#gamma} = %d", event, nPrimaryGammas));
+
+    info.Draw();
+
     // ============================================================
-    // Longitudinal deposited energy
+    // Bottom pad: longitudinal deposited energy
     // ============================================================
 
-    {
-      TCanvas canvas(Form("cLayers_%d", event),
-                     "Longitudinal energy deposition", 1000, 700);
+    canvas.cd(2);
 
-      // Leave enough space at the top for the information box.
-      canvas.SetTopMargin(0.16);
+    gPad->SetTopMargin(0.1);
+    gPad->SetBottomMargin(0.12);
 
-      TH1D layers("layers", "", NumberOfLayers, 0.5, NumberOfLayers + 0.5);
+    TH1D layers("layers", "", NumberOfLayers, 0.5, NumberOfLayers + 0.5);
 
-      for (size_t i = 0; i < layerEdep->size(); ++i) {
+    for (size_t i = 0;
+         i < layerEdep->size() && i < static_cast<size_t>(NumberOfLayers);
+         ++i) {
 
-        layers.SetBinContent(static_cast<int>(i) + 1, layerEdep->at(i));
-      }
-
-      layers.GetXaxis()->SetTitle("Layer");
-
-      layers.GetYaxis()->SetTitle("Deposited energy [MeV]");
-
-      layers.SetLineWidth(2);
-
-      // Draw the histogram FIRST.
-      layers.Draw("HIST");
-
-      // Draw the event information AFTER the histogram.
-      TPaveText info(0.25, 0.92, 0.75, 0.995, "NDC");
-
-      info.SetFillStyle(0);
-      info.SetBorderSize(0);
-      info.SetTextAlign(22);
-      info.SetTextSize(0.035);
-
-      info.AddText(Form("Event %d   #mu = %.2f MeV   #sigma = %.2f MeV", event,
-                        generatedMean, generatedSigma));
-
-      info.Draw();
-
-      canvas.Modified();
-      canvas.Update();
-
-      std::ostringstream outputName;
-
-      outputName << "event_" << std::setw(3) << std::setfill('0') << event
-                 << "_layers.png";
-
-      canvas.SaveAs(outputName.str().c_str());
-
-      std::cout << "Saved: " << outputName.str() << std::endl;
+      layers.SetBinContent(static_cast<int>(i) + 1, layerEdep->at(i));
     }
+
+    layers.GetXaxis()->SetTitle("Layer number");
+
+    layers.GetYaxis()->SetTitle("Deposited energy [MeV]");
+
+    layers.SetLineWidth(2);
+
+    layers.Draw("HIST");
+
+    // Make sure pad coordinates are updated before creating TGaxis
+    gPad->Update();
+
+    // ============================================================
+    // Top X-axis: detector depth in cm
+    // ============================================================
+
+    const double depthMaxCm = NumberOfLayers * LayerThicknessCm;
+
+    TGaxis depthAxis(0.5, gPad->GetUymax(), NumberOfLayers + 0.5,
+                     gPad->GetUymax(), 0.0, depthMaxCm, 510, "+");
+
+    depthAxis.SetLabelSize(0.032);
+
+    // Move depth numbers above the axis line.
+    depthAxis.SetLabelOffset(-0.035);
+
+    // Short ticks.
+    depthAxis.SetTickSize(0.018);
+
+    depthAxis.SetNdivisions(9);
+
+    TLatex depthTitle;
+
+    depthTitle.SetNDC();
+    depthTitle.SetTextAlign(22);
+    depthTitle.SetTextSize(0.032);
+
+    depthTitle.DrawLatex(0.50, 0.97, "Depth [cm]");
+
+    depthAxis.Draw();
+    // ============================================================
+    // Save complete event canvas
+    // ============================================================
+
+    canvas.Modified();
+    canvas.Update();
+
+    std::ostringstream outputName;
+
+    outputName << "event_" << std::setw(3) << std::setfill('0') << event
+               << "_overview.png";
+
+    canvas.SaveAs(outputName.str().c_str());
+
+    std::cout << "Saved: " << outputName.str() << std::endl;
   }
 
+  // Close file only after processing all events
   file->Close();
   delete file;
 
-  std::cout << "\nFinished. Saved " << 2 * nEventsToSave << " PNG files."
+  std::cout << "\nFinished. Saved " << nEventsToSave << " PNG files."
             << std::endl;
 }
