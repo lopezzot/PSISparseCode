@@ -13,7 +13,7 @@ from sklearn.preprocessing import StandardScaler
 # Configuration
 # ============================================================
 
-ROOT_FILE = "../../build/accelerator_dataset.root"
+ROOT_FILE = "layer_signals.root"
 TREE_NAME = "LayerSignals"
 
 N_LAYERS = 180
@@ -296,7 +296,7 @@ pred_mean = np.sum(
 # Reconstructed spectral sigma
 # ============================================================
 
-true_sigma = np.sqrt(
+true_spectral_width = np.sqrt(
     np.sum(
         Y_true
         * (energy_bins[None, :] - true_mean[:, None]) ** 2,
@@ -304,7 +304,7 @@ true_sigma = np.sqrt(
     )
 )
 
-pred_sigma = np.sqrt(
+pred_spectral_width = np.sqrt(
     np.sum(
         Y_pred
         * (energy_bins[None, :] - pred_mean[:, None]) ** 2,
@@ -318,7 +318,7 @@ pred_sigma = np.sqrt(
 # ============================================================
 
 mean_error = pred_mean - true_mean
-sigma_error = pred_sigma - true_sigma
+sigma_error = pred_spectral_width - true_spectral_width
 
 
 print()
