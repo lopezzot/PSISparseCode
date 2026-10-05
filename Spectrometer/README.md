@@ -34,3 +34,7 @@ A simple Geant4 simulation needed to understand if a longitudinally segmented ca
    source .venv/bin/activate
    pip install -r requirements.txt
    ```
+2. Train the net
+   ```sh
+   python3 train_acceleratorspectrum.py --input input_file.root
+   ```
