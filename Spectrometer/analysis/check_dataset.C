@@ -76,10 +76,10 @@ void check_dataset(const char *filename = "layer_signals.root") {
       continue;
     }
 
-    std::cout << "Event " << event << " | N_gamma = " << nPrimaryGammas
+    std::cout << "Event " << event
+              << " | N_gamma = " << nPrimaryGammas
               << " | E_primary = " << totalPrimaryEnergy << " MeV"
-              << " | mu = " << generatedMean << " MeV"
-              << " | sigma = " << generatedSigma << " MeV" << std::endl;
+              << std::endl;
 
     // ============================================================
     // Primary gamma spectrum
@@ -116,9 +116,12 @@ void check_dataset(const char *filename = "layer_signals.root") {
       info.SetTextAlign(22);
       info.SetTextSize(0.035);
 
-      info.AddText(Form("Event %d   #mu = %.2f MeV   #sigma = %.2f MeV", event,
-                        generatedMean, generatedSigma));
-
+      info.AddText(
+          Form("Event %d   N_{#gamma} = %d",
+             event,
+             nPrimaryGammas)
+      );
+      
       info.Draw();
 
       canvas.Modified();
@@ -169,8 +172,11 @@ void check_dataset(const char *filename = "layer_signals.root") {
       info.SetTextAlign(22);
       info.SetTextSize(0.035);
 
-      info.AddText(Form("Event %d   #mu = %.2f MeV   #sigma = %.2f MeV", event,
-                        generatedMean, generatedSigma));
+      info.AddText(
+          Form("Event %d   N_{#gamma} = %d",
+              event,
+               nPrimaryGammas)
+      );
 
       info.Draw();
 
