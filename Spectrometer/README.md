@@ -20,7 +20,7 @@ A simple Geant4 simulation needed to understand if a longitudinally segmented ca
    ```sh
    ./Spectrometer run.mac
    ```
-5. To insect the simulation output
+5. To inspect the simulation output
    ```sh
    cd analysis
    root -l 'check_dataset.C("path-to/layer_signals.root")'
@@ -33,4 +33,8 @@ A simple Geant4 simulation needed to understand if a longitudinally segmented ca
    python3 -m venv .venv
    source .venv/bin/activate
    pip install -r requirements.txt
+   ```
+2. Train the net
+   ```sh
+   python3 train_acceleratorspectrum.py --input input_file.root
    ```

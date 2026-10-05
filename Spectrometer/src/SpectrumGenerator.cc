@@ -76,29 +76,21 @@ G4double SpectrumGenerator::SampleGaussianEnergy(G4double mean,
 std::vector<G4double>
 SpectrumGenerator::GenerateAcceleratorSpectrum(G4int numberOfGammas) {
 
-  // Randomize continuum parameters for this event.
-  const G4double continuumPower =
-      G4UniformRand() * (SimulationConfig::AcceleratorContinuumPowerMax -
-                         SimulationConfig::AcceleratorContinuumPowerMin) +
-      SimulationConfig::AcceleratorContinuumPowerMin;
+  // Keep the continuum shape fixed across events.
+  const G4double continuumPower = SimulationConfig::AcceleratorContinuumPower;
 
+  const G4double continuumTurnOn = SimulationConfig::AcceleratorContinuumTurnOn;
+
+  const G4double continuumCutoff = SimulationConfig::AcceleratorContinuumCutoff;
+
+  // Allow only a small event-to-event variation of the
+  // continuum normalization.
   const G4double continuumAmplitude =
-      G4UniformRand() * (SimulationConfig::AcceleratorContinuumAmplitudeMax -
-                         SimulationConfig::AcceleratorContinuumAmplitudeMin) +
+      G4UniformRand() *
+          (SimulationConfig::AcceleratorContinuumAmplitudeMax -
+           SimulationConfig::AcceleratorContinuumAmplitudeMin) +
       SimulationConfig::AcceleratorContinuumAmplitudeMin;
-
-  // Randomize continuum low-energy smoothing scale.
-  const G4double continuumTurnOn =
-      G4UniformRand() * (SimulationConfig::AcceleratorContinuumTurnOnMax -
-                         SimulationConfig::AcceleratorContinuumTurnOnMin) +
-      SimulationConfig::AcceleratorContinuumTurnOnMin;
-
-  // Randomize continuum high-energy cutoff.
-  const G4double continuumCutoff =
-      G4UniformRand() * (SimulationConfig::AcceleratorContinuumCutoffMax -
-                         SimulationConfig::AcceleratorContinuumCutoffMin) +
-      SimulationConfig::AcceleratorContinuumCutoffMin;
-
+  
   // Randomize the number of peaks.
   const G4int numberOfPeaks =
       SimulationConfig::AcceleratorNumberOfPeaksMin +

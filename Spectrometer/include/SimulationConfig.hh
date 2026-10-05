@@ -56,28 +56,29 @@ constexpr G4double AcceleratorPeakEnergyMin = 1.0 * MeV;
 constexpr G4double AcceleratorPeakEnergyMax = 450.0 * MeV;
 
 // Peak width.
-constexpr G4double AcceleratorPeakSigmaMin = 0.1 * MeV;
+constexpr G4double AcceleratorPeakSigmaMin = 8.0 * MeV;
 constexpr G4double AcceleratorPeakSigmaMax = 10.0 * MeV;
 
 // Relative peak amplitude.
 constexpr G4double AcceleratorPeakAmplitudeMin = 0.2;
 constexpr G4double AcceleratorPeakAmplitudeMax = 2.0;
 
-// Continuum power-law parameters.
-constexpr G4double AcceleratorContinuumPowerMin = 0.5;
-constexpr G4double AcceleratorContinuumPowerMax = 1.5;
+// Continuum power-law shape.
+// These parameters are fixed to keep the background shape stable.
+constexpr G4double AcceleratorContinuumPower = 1.0;
 
 // Continuum normalization.
-constexpr G4double AcceleratorContinuumAmplitudeMin = 0.5;
-constexpr G4double AcceleratorContinuumAmplitudeMax = 1.0;
+// The amplitude is allowed to vary slightly event by event.
+constexpr G4double AcceleratorContinuumAmplitudeMin = 0.675;
+constexpr G4double AcceleratorContinuumAmplitudeMax = 0.825;
 
 // Low-energy smoothing scale.
-constexpr G4double AcceleratorContinuumTurnOnMin = 2.0 * MeV;
-constexpr G4double AcceleratorContinuumTurnOnMax = 8.0 * MeV;
+// Fixed to keep the background shape stable.
+constexpr G4double AcceleratorContinuumTurnOn = 5.0 * MeV;
 
 // High-energy exponential cutoff.
-constexpr G4double AcceleratorContinuumCutoffMin = 200.0 * MeV;
-constexpr G4double AcceleratorContinuumCutoffMax = 500.0 * MeV;
+// Fixed to keep the background shape stable.
+constexpr G4double AcceleratorContinuumCutoff = 350.0 * MeV;
 
 // --------------------------------------------------
 // Primary statistics
