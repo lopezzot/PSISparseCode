@@ -38,9 +38,9 @@ ENERGY_MAX = 500.0
 
 RANDOM_SEED = 42
 
-EPOCHS = 750
+EPOCHS = 1000
 LEARNING_RATE = 1e-3
-PATIENCE = 50 # for early stopping
+PATIENCE = 75 # for early stopping
 
 
 # ============================================================
