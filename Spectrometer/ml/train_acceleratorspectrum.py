@@ -368,13 +368,15 @@ model.eval()
 
 with torch.no_grad():
 
-    test_logits = model(X_test)
+    test_logits = model(X_test) # get predicted output
 
+    # transform predicted output in a spectrum
     test_prediction = torch.softmax(
         test_logits,
         dim=1,
     )
 
+    # calculate test MSE
     test_loss = loss_function(
         test_prediction,
         Y_test,
@@ -423,32 +425,10 @@ pred_mean = np.sum(
 
 
 # ============================================================
-# Reconstructed spectral sigma
-# ============================================================
-
-true_spectral_width = np.sqrt(
-    np.sum(
-        Y_true
-        * (energy_bins[None, :] - true_mean[:, None]) ** 2,
-        axis=1,
-    )
-)
-
-pred_spectral_width = np.sqrt(
-    np.sum(
-        Y_pred
-        * (energy_bins[None, :] - pred_mean[:, None]) ** 2,
-        axis=1,
-    )
-)
-
-
-# ============================================================
-# Mean and sigma errors
+# Mean  errors
 # ============================================================
 
 mean_error = pred_mean - true_mean
-sigma_error = pred_spectral_width - true_spectral_width
 
 
 print()
@@ -464,21 +444,6 @@ print(
     np.mean(np.abs(mean_error)),
     "MeV",
 )
-
-print()
-print("Spectral sigma:")
-print(
-    "  Mean error:",
-    np.mean(sigma_error),
-    "MeV",
-)
-
-print(
-    "  Mean absolute error:",
-    np.mean(np.abs(sigma_error)),
-    "MeV",
-)
-
 
 # ============================================================
 # Global spectral MAE
