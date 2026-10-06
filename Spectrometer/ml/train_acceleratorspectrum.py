@@ -457,6 +457,202 @@ print()
 print("Global spectral MAE:", spectral_mae)
 
 # ============================================================
+# Peak position reconstruction
+# ============================================================
+
+# Find the energy bin with the maximum probability
+# for each true spectrum and each reconstructed spectrum.
+#
+# This represents the reconstructed peak position,
+# not the mean energy of the complete spectrum.
+true_peak_indices = np.argmax(
+    Y_true,
+    axis=1,
+)
+
+pred_peak_indices = np.argmax(
+    Y_pred,
+    axis=1,
+)
+
+# Convert peak-bin indices into physical energies
+# using the corresponding bin centers.
+true_peak_energy = energy_bins[
+    true_peak_indices
+]
+
+pred_peak_energy = energy_bins[
+    pred_peak_indices
+]
+
+# Calculate the peak-position error for every event.
+#
+# Positive value:
+#   predicted peak is at higher energy than the true peak.
+#
+# Negative value:
+#   predicted peak is at lower energy than the true peak.
+peak_error = (
+    pred_peak_energy
+    - true_peak_energy
+)
+
+
+# ============================================================
+# Peak position statistics
+# ============================================================
+
+peak_mean_error = np.mean(
+    peak_error
+)
+
+peak_mae = np.mean(
+    np.abs(peak_error)
+)
+
+peak_rmse = np.sqrt(
+    np.mean(peak_error ** 2)
+)
+
+
+print()
+print("Peak position:")
+print(
+    "  Mean error:",
+    peak_mean_error,
+    "MeV",
+)
+
+print(
+    "  Mean absolute error:",
+    peak_mae,
+    "MeV",
+)
+
+print(
+    "  RMSE:",
+    peak_rmse,
+    "MeV",
+)
+
+
+# ============================================================
+# True vs predicted peak position
+# ============================================================
+
+true_peak_indices = np.argmax(Y_true, axis=1)
+pred_peak_indices = np.argmax(Y_pred, axis=1)
+true_peak_energy = energy_bins[true_peak_indices]
+pred_peak_energy = energy_bins[pred_peak_indices]
+
+plt.figure(figsize=(7, 7))
+
+plt.scatter(
+    true_peak_energy,
+    pred_peak_energy,
+    alpha=0.5,
+)
+
+# Ideal reconstruction:
+# predicted peak energy = true peak energy.
+min_energy = min(
+    true_peak_energy.min(),
+    pred_peak_energy.min(),
+)
+
+max_energy = max(
+    true_peak_energy.max(),
+    pred_peak_energy.max(),
+)
+
+plt.plot(
+    [min_energy, max_energy],
+    [min_energy, max_energy],
+    linestyle="--",
+    linewidth=2,
+    label="Ideal reconstruction",
+)
+
+plt.xlabel("True peak position [MeV]")
+plt.ylabel("Predicted peak position [MeV]")
+plt.title("True vs predicted peak position")
+
+plt.legend()
+plt.grid(True, alpha=0.3)
+
+plt.tight_layout()
+
+peak_scatter_filename = os.path.join(
+    PLOT_DIR,
+    "peak_position_scatter.png",
+)
+
+plt.savefig(
+    peak_scatter_filename,
+    dpi=200,
+    bbox_inches="tight",
+)
+
+plt.close()
+
+print()
+print(
+    f"Peak-position scatter plot saved in: "
+    f"{peak_scatter_filename}"
+)
+
+# ============================================================
+# Peak position error distribution
+# ============================================================
+
+plt.figure(figsize=(8, 5))
+
+plt.hist(
+    peak_error,
+    bins=30,
+)
+
+plt.axvline(
+    0.0,
+    linestyle="--",
+    linewidth=2,
+    label="Zero error",
+)
+
+plt.xlabel(
+    "Peak position error [MeV]"
+)
+
+plt.ylabel("Number of test events")
+
+plt.title(
+    "Distribution of peak position errors"
+)
+
+plt.legend()
+plt.grid(True, alpha=0.3)
+
+plt.tight_layout()
+
+peak_error_hist_filename = os.path.join(
+    PLOT_DIR,
+    "peak_position_error_histogram.png",
+)
+
+plt.savefig(
+    peak_error_hist_filename,
+    dpi=200,
+    bbox_inches="tight",
+)
+
+plt.close()
+
+print(
+    f"Peak-error histogram saved in: "
+    f"{peak_error_hist_filename}"
+)
+
+# ============================================================
 # Save reconstructed spectra plots
 # ============================================================
 
