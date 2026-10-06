@@ -408,6 +408,97 @@ energy_bins = (
     + (np.arange(N_BINS) + 0.5) * bin_width
 )
 
+# ============================================================
+# Fluence-to-ambient-dose-equivalent conversion coefficients
+# ============================================================
+
+# Tabulated conversion coefficients:
+# H*(10) / Phi [Sv cm^2]
+conversion_energy = np.array([
+    1.0e-02,
+    1.5e-02,
+    2.0e-02,
+    3.0e-02,
+    4.0e-02,
+    5.0e-02,
+    6.0e-02,
+    8.0e-02,
+    1.0e-01,
+    1.5e-01,
+    2.0e-01,
+    3.0e-01,
+    4.0e-01,
+    5.0e-01,
+    6.0e-01,
+    8.0e-01,
+    1.0e+00,
+    1.5e+00,
+    2.0e+00,
+    3.0e+00,
+    4.0e+00,
+    5.0e+00,
+    6.0e+00,
+    8.0e+00,
+    1.0e+01,
+    2.0e+01,
+    3.0e+01,
+    4.0e+01,
+    5.0e+01,
+    1.0e+02,
+    2.0e+02,
+    5.0e+02,
+    1.0e+03,
+    2.0e+03,
+    5.0e+03,
+    1.0e+04,
+])
+
+conversion_factor = np.array([
+    8.33e-14,
+    8.52e-13,
+    1.05e-12,
+    0.80e-12,
+    0.62e-12,
+    0.52e-12,
+    0.51e-12,
+    0.56e-12,
+    0.62e-12,
+    0.87e-12,
+    1.23e-12,
+    1.81e-12,
+    2.36e-12,
+    2.78e-12,
+    3.46e-12,
+    4.29e-12,
+    5.18e-12,
+    6.92e-12,
+    8.25e-12,
+    1.04e-11,
+    1.07e-11,
+    1.04e-11,
+    9.58e-12,
+    9.10e-12,
+    8.76e-12,
+    8.29e-12,
+    8.23e-12,
+    8.26e-12,
+    8.64e-12,
+    9.00e-12,
+    1.02e-11,
+    1.18e-11,
+    1.17e-11,
+    1.15e-11,
+    1.33e-11,
+    1.22e-11,
+])
+
+# Interpolate the conversion coefficients at the centers
+# of the 50 energy bins used by the neural network.
+conversion_factor_bins = np.interp(
+    energy_bins,
+    conversion_energy,
+    conversion_factor,
+)
 
 # ============================================================
 # Reconstructed spectral mean
@@ -443,6 +534,135 @@ print(
     "  Mean absolute error:",
     np.mean(np.abs(mean_error)),
     "MeV",
+)
+
+# ============================================================
+# Ambient dose equivalent H*(10)
+# ============================================================
+
+# Number of primary gamma rays per event.
+N_PRIMARY_GAMMAS = 10000
+
+# Transverse detector area:
+# 10 cm x 10 cm = 100 cm^2.
+DETECTOR_AREA_CM2 = 100.0
+
+# Convert the normalized spectra into fluence per energy bin.
+#
+# Y_true and Y_pred contain the fraction of photons
+# in each energy bin.
+#
+# Therefore:
+#
+#   number of photons in bin = 10000 * spectrum_fraction
+#
+# and:
+#
+#   fluence = number of photons / detector area
+#
+true_fluence = (
+    N_PRIMARY_GAMMAS
+    * Y_true
+    / DETECTOR_AREA_CM2
+)
+
+pred_fluence = (
+    N_PRIMARY_GAMMAS
+    * Y_pred
+    / DETECTOR_AREA_CM2
+)
+
+# Calculate H*(10) by folding the fluence spectrum
+# with the energy-dependent fluence-to-H*(10)
+# conversion coefficients.
+#
+# H*(10) = sum_j Phi_j * k_j
+#
+# where:
+#   Phi_j = fluence in energy bin j [1/cm^2]
+#   k_j   = H*(10)/Phi [Sv cm^2]
+#
+# The resulting H*(10) is expressed in Sv per event.
+true_Hstar10 = np.sum(
+    true_fluence
+    * conversion_factor_bins[None, :],
+    axis=1,
+)
+
+pred_Hstar10 = np.sum(
+    pred_fluence
+    * conversion_factor_bins[None, :],
+    axis=1,
+)
+
+# ============================================================
+# H*(10) errors
+# ============================================================
+
+Hstar10_error = (
+    pred_Hstar10 - true_Hstar10
+)
+
+Hstar10_relative_error = (
+    Hstar10_error / true_Hstar10
+)
+
+Hstar10_mae = np.mean(
+    np.abs(Hstar10_error)
+)
+
+Hstar10_rmse = np.sqrt(
+    np.mean(Hstar10_error ** 2)
+)
+
+Hstar10_mean_error = np.mean(
+    Hstar10_error
+)
+
+Hstar10_mean_absolute_relative_error = (
+    np.mean(
+        np.abs(Hstar10_relative_error)
+    )
+    * 100.0
+)
+
+print()
+print("Ambient dose equivalent H*(10):")
+
+print(
+    "  Mean true H*(10):",
+    np.mean(true_Hstar10),
+    "Sv",
+)
+
+print(
+    "  Mean predicted H*(10):",
+    np.mean(pred_Hstar10),
+    "Sv",
+)
+
+print(
+    "  Mean error:",
+    Hstar10_mean_error,
+    "Sv",
+)
+
+print(
+    "  Mean absolute error:",
+    Hstar10_mae,
+    "Sv",
+)
+
+print(
+    "  RMSE:",
+    Hstar10_rmse,
+    "Sv",
+)
+
+print(
+    "  Mean absolute relative error:",
+    Hstar10_mean_absolute_relative_error,
+    "%",
 )
 
 # ============================================================
@@ -715,4 +935,168 @@ for plot_number, index in enumerate(plot_indices):
     plt.close()
 
 print()
-print(f"Plots saved in: {PLOT_DIR}/")
+print(f"Event plots saved in: {PLOT_DIR}/")
+
+# ============================================================
+# True vs predicted H*(10)
+# ============================================================
+
+plt.figure(figsize=(7, 7))
+
+plt.scatter(
+    true_Hstar10,
+    pred_Hstar10,
+    alpha=0.5,
+)
+
+# Ideal reconstruction:
+# predicted H*(10) = true H*(10).
+min_Hstar10 = min(
+    true_Hstar10.min(),
+    pred_Hstar10.min(),
+)
+
+max_Hstar10 = max(
+    true_Hstar10.max(),
+    pred_Hstar10.max(),
+)
+
+plt.plot(
+    [min_Hstar10, max_Hstar10],
+    [min_Hstar10, max_Hstar10],
+    linestyle="--",
+    linewidth=2,
+    label="Ideal reconstruction",
+)
+
+plt.xlabel("True H*(10) [Sv]")
+plt.ylabel("Predicted H*(10) [Sv]")
+plt.title("True vs predicted ambient dose equivalent")
+
+plt.legend()
+plt.grid(True, alpha=0.3)
+
+plt.tight_layout()
+
+Hstar10_scatter_filename = os.path.join(
+    PLOT_DIR,
+    "Hstar10_true_vs_predicted.png",
+)
+
+plt.savefig(
+    Hstar10_scatter_filename,
+    dpi=200,
+    bbox_inches="tight",
+)
+
+plt.close()
+
+print()
+print(
+    f"H*(10) scatter plot saved in: "
+    f"{Hstar10_scatter_filename}"
+)
+
+# ============================================================
+# H*(10) error distribution
+# ============================================================
+
+plt.figure(figsize=(8, 5))
+
+plt.hist(
+    Hstar10_error,
+    bins=30,
+)
+
+plt.axvline(
+    0.0,
+    linestyle="--",
+    linewidth=2,
+    label="Zero error",
+)
+
+plt.xlabel("H*(10) error [Sv]")
+plt.ylabel("Number of test events")
+plt.title("Distribution of H*(10) reconstruction errors")
+
+plt.legend()
+plt.grid(True, alpha=0.3)
+
+plt.tight_layout()
+
+Hstar10_error_filename = os.path.join(
+    PLOT_DIR,
+    "Hstar10_error_histogram.png",
+)
+
+plt.savefig(
+    Hstar10_error_filename,
+    dpi=200,
+    bbox_inches="tight",
+)
+
+plt.close()
+
+print(
+    f"H*(10) error histogram saved in: "
+    f"{Hstar10_error_filename}"
+)
+
+# ============================================================
+# Relative H*(10) error distribution
+# ============================================================
+
+# Convert the relative dose error from a fraction
+# to a percentage.
+Hstar10_relative_error_percent = (
+    Hstar10_relative_error * 100.0
+)
+
+plt.figure(figsize=(8, 5))
+
+plt.hist(
+    Hstar10_relative_error_percent,
+    bins=30,
+)
+
+plt.axvline(
+    0.0,
+    linestyle="--",
+    linewidth=2,
+    label="Zero error",
+)
+
+plt.xlabel(
+    "Relative H*(10) error [%]"
+)
+
+plt.ylabel(
+    "Number of test events"
+)
+
+plt.title(
+    "Distribution of relative H*(10) reconstruction errors"
+)
+
+plt.legend()
+plt.grid(True, alpha=0.3)
+
+plt.tight_layout()
+
+Hstar10_relative_error_filename = os.path.join(
+    PLOT_DIR,
+    "Hstar10_relative_error_histogram.png",
+)
+
+plt.savefig(
+    Hstar10_relative_error_filename,
+    dpi=200,
+    bbox_inches="tight",
+)
+
+plt.close()
+
+print(
+    f"Relative H*(10) error histogram saved in: "
+    f"{Hstar10_relative_error_filename}"
+)
