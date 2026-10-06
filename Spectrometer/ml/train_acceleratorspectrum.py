@@ -5,6 +5,7 @@ import torch.nn as nn
 import matplotlib.pyplot as plt
 import os
 import argparse
+import copy
 
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
@@ -37,8 +38,9 @@ ENERGY_MAX = 500.0
 
 RANDOM_SEED = 42
 
-EPOCHS = 250
+EPOCHS = 750
 LEARNING_RATE = 1e-3
+PATIENCE = 50 # for early stopping
 
 
 # ============================================================
@@ -48,6 +50,14 @@ LEARNING_RATE = 1e-3
 np.random.seed(RANDOM_SEED)
 torch.manual_seed(RANDOM_SEED)
 
+
+
+# ============================================================
+# Plot directory
+# ============================================================
+
+PLOT_DIR = "plots_accelerator"
+os.makedirs(PLOT_DIR, exist_ok=True)
 
 # ============================================================
 # Load ROOT dataset
@@ -175,6 +185,13 @@ class SpectrumNet(nn.Module):
 
 model = SpectrumNet()
 
+train_losses = []
+val_losses = []
+
+best_val_loss = float("inf")
+best_model_state = None
+best_epoch = 0
+epochs_without_improvement = 0
 
 # ============================================================
 # Loss and optimizer
@@ -212,6 +229,7 @@ for epoch in range(EPOCHS):
 
     optimizer.step()
 
+    train_loss = loss.item()
 
     # --------------------------------------------------------
     # Validation
@@ -233,6 +251,25 @@ for epoch in range(EPOCHS):
             Y_val,
         )
 
+    validation_loss = val_loss.item()
+
+    train_losses.append(train_loss)
+    val_losses.append(validation_loss)
+
+    # --------------------------------------------------------
+    # Save best model
+    # --------------------------------------------------------
+
+    if validation_loss < best_val_loss:
+
+        best_val_loss = validation_loss
+        best_epoch = epoch + 1
+        best_model_state = copy.deepcopy(model.state_dict())
+        epochs_without_improvement = 0
+
+    else:
+
+        epochs_without_improvement += 1
 
     if (epoch + 1) % 10 == 0:
 
@@ -242,6 +279,86 @@ for epoch in range(EPOCHS):
             f"Val loss = {val_loss.item():.6f}"
         )
 
+        # --------------------------------------------------------
+    # Early stopping
+    # --------------------------------------------------------
+
+    if epochs_without_improvement >= PATIENCE:
+
+        print()
+        print(
+            f"Early stopping at epoch {epoch + 1}. "
+            f"Best validation loss at epoch {best_epoch}."
+        )
+
+        break
+
+# ============================================================
+# Restore best model
+# ============================================================
+
+model.load_state_dict(best_model_state)
+
+print()
+print("Best epoch:", best_epoch)
+print("Best validation loss:", best_val_loss)
+
+# ============================================================
+# Training history plot
+# ============================================================
+
+plt.figure(figsize=(8, 5))
+
+epochs_completed = np.arange(
+    1,
+    len(train_losses) + 1,
+)
+
+plt.plot(
+    epochs_completed,
+    train_losses,
+    label="Training loss",
+    linewidth=2,
+)
+
+plt.plot(
+    epochs_completed,
+    val_losses,
+    label="Validation loss",
+    linewidth=2,
+)
+
+plt.axvline(
+    best_epoch,
+    linestyle="--",
+    linewidth=1.5,
+    label=f"Best epoch = {best_epoch}",
+)
+
+plt.xlabel("Training epoch")
+plt.ylabel("MSE loss")
+plt.title("Training history")
+
+plt.legend()
+plt.grid(True, alpha=0.3)
+
+plt.tight_layout()
+
+loss_plot_filename = os.path.join(
+    PLOT_DIR,
+    "training_history.png",
+)
+
+plt.savefig(
+    loss_plot_filename,
+    dpi=200,
+    bbox_inches="tight",
+)
+
+plt.close()
+
+print()
+print(f"Training history saved in: {loss_plot_filename}")
 
 # ============================================================
 # Test
@@ -378,11 +495,7 @@ print("Global spectral MAE:", spectral_mae)
 # Save reconstructed spectra plots
 # ============================================================
 
-PLOT_DIR = "plots_accelerator"
-
-os.makedirs(PLOT_DIR, exist_ok=True)
-
-N_PLOTS = 10
+N_PLOTS = 20
 
 # Select a few test events.
 plot_indices = np.linspace(
