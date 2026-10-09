@@ -160,6 +160,7 @@ The output file will be created inside:
 
 To lint and format
 ```sh
+python -m pip install ruff
 ruff check --fix phaidra.py
 ruff format phaidra.py
 ```
