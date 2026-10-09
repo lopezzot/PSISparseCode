@@ -34,7 +34,10 @@ from serial.tools import list_ports
 # --dontsaveondrive will deactivate the backup on disk of closed files
 parser = argparse.ArgumentParser()
 parser.add_argument("--dontsaveondrive", action="store_false", default=True)
-SAVE_ON_DRIVE = parser.parse_args().dontsaveondrive
+parser.add_argument("--toterminal", action="store_true")
+args = parser.parse_args()
+SAVE_ON_DRIVE = args.dontsaveondrive
+PRINT_TO_TERMINAL = args.toterminal
 
 # Serial communication settings used by the logger.
 BAUDRATE = 9600
@@ -727,6 +730,9 @@ class PhaiDRAApp:
                         "ascii",
                         errors="replace",
                     ).rstrip("\r\n")
+
+                    if PRINT_TO_TERMINAL:
+                        print(line, flush=True)  # print to terminal in debug mode.
 
                     # Ignore empty lines.
                     if not line:
