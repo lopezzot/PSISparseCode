@@ -20,6 +20,10 @@ Options:
 python phaidra.py --dontsaveondrive
 ```
 Turns off automatic backup on network drive.
+```sh
+python phaidra.py --toterminal
+```
+Prints logger stream directly to terminal.
 
 ## 1. Requirements
 
