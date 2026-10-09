@@ -581,6 +581,24 @@ class PhaiDRAApp:
         )
         self.acquisition_thread.start()
 
+    def backup_file(self, file_path):
+        """Copy a closed file to the drive without interrupting acquisition."""
+        global SAVE_ON_DRIVE
+
+        if not SAVE_ON_DRIVE:
+            return
+
+        try:
+            shutil.copy2(file_path, BACKUP_DIR / file_path.name)
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            print(f"[{timestamp}] Copied {file_path.name} to drive.")
+
+        except OSError as error:
+            SAVE_ON_DRIVE = False
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            print(f"[{timestamp}] WARNING: Backup failed: {error}")
+            print(f"[{timestamp}] WARNING: Drive backup disabled. Continuing locally.")
+
     def acquire_data(self):
         """Connect to the logger and save each received line to the file."""
         serial_connection = None
@@ -674,9 +692,9 @@ class PhaiDRAApp:
                         data_file.close()
 
                         # Copy the closed daily file to the backup drive.
-                        if SAVE_ON_DRIVE:
-                            shutil.copy2(old_file, BACKUP_DIR / old_file.name)
-                            print(f"Copied {self.output_file.name} to drive.")
+                        self.backup_file(
+                            old_file
+                        )  # handles gracefully network credentials expiration
 
                         self.create_output_file()
                         data_file = self.output_file.open("a", encoding="utf-8")
@@ -733,9 +751,9 @@ class PhaiDRAApp:
                     data_file.close()
 
                 # Copy the completed file to the backup drive.
-                if SAVE_ON_DRIVE:
-                    shutil.copy2(self.output_file, BACKUP_DIR / self.output_file.name)
-                    print(f"Copied {self.output_file.name} to drive.")
+                self.backup_file(
+                    self.output_file
+                )  # handles gracefully network drive unavailability
 
         except serial.SerialException as error:
             # Report serial communication failures.
