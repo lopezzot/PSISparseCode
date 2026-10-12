@@ -25,6 +25,13 @@ python phaidra.py --toterminal
 ```
 Prints logger stream directly to terminal.
 
+NOTE: the kerberos credentials to backup on network drive expire over some days. In this case just reinit the credentials, `phadira.py` will check the new credentials, restart backup and synch local files not saved on the network drive.
+
+Alternatively, to force sync of local files to the network drive use:
+```sh
+python sync_phaidra_files.py
+```
+
 ## 1. Requirements
 
 The logger must appear as a serial USB device.
