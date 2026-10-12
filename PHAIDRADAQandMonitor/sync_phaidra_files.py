@@ -1,18 +1,16 @@
 #!/usr/bin/env python3
 """Synchronize closed Phaidra DAQ files from the local folder to the network drive."""
 
-import os
 import shutil
 import tempfile
 from datetime import datetime
 from pathlib import Path
 
+import psutil
+
 LOCAL_DIR = Path.cwd()
-BACKUP_DIR = Path(
-    "/psi.ch/.cifs-server/fs02.psi.ch/ea_messdaten/phaidra/2026/"
-)
+BACKUP_DIR = Path("/psi.ch/.cifs-server/fs02.psi.ch/ea_messdaten/phaidra/2026/")
 FILE_PREFIX = "phaidra_data"
-ACTIVE_FILE_MARKER = LOCAL_DIR / ".phaidra_active_file"
 
 
 def timestamp():
@@ -30,63 +28,42 @@ def check_backup_drive():
         return False, error
 
 
-def mark_active_file(file_path):
-    """Record the current output filename so synchronization can skip it."""
-    temp_marker = ACTIVE_FILE_MARKER.with_name(
-        f"{ACTIVE_FILE_MARKER.name}.{os.getpid()}.tmp"
-    )
-    try:
-        temp_marker.write_text(f"{os.getpid()}\n{file_path.name}\n", encoding="utf-8")
-        temp_marker.replace(ACTIVE_FILE_MARKER)
-    except OSError as error:
-        print(f"[{timestamp()}] WARNING: Cannot update active-file marker: {error}")
+def open_local_daq_files():
+    """Return local Phaidra data filenames currently open by any process."""
+    open_names = set()
+    local_dir = LOCAL_DIR.resolve()
+
+    for process in psutil.process_iter(["open_files"]):
         try:
-            temp_marker.unlink(missing_ok=True)
-        except OSError:
-            pass
+            for opened_file in process.info["open_files"] or []:
+                try:
+                    path = Path(opened_file.path).resolve()
 
+                    if (
+                        path.parent == local_dir
+                        and path.name.startswith(FILE_PREFIX)
+                        and path.suffix == ".txt"
+                    ):
+                        open_names.add(path.name)
 
-def clear_active_file_marker():
-    """Remove this process's active-file marker after acquisition ends."""
-    try:
-        lines = ACTIVE_FILE_MARKER.read_text(encoding="utf-8").splitlines()
-        if lines and int(lines[0]) == os.getpid():
-            ACTIVE_FILE_MARKER.unlink(missing_ok=True)
-    except FileNotFoundError:
-        pass
-    except (OSError, ValueError) as error:
-        print(f"[{timestamp()}] WARNING: Cannot remove active-file marker: {error}")
+                except (OSError, RuntimeError):
+                    continue
 
+        except (
+            psutil.NoSuchProcess,
+            psutil.AccessDenied,
+            psutil.ZombieProcess,
+            OSError,
+        ):
+            continue
 
-def _active_filename():
-    """Return the active filename, clearing a marker left by a dead process."""
-    try:
-        lines = ACTIVE_FILE_MARKER.read_text(encoding="utf-8").splitlines()
-        pid, filename = int(lines[0]), lines[1]
-    except (OSError, ValueError, IndexError):
-        return None
-
-    try:
-        os.kill(pid, 0)
-    except ProcessLookupError:
-        try:
-            ACTIVE_FILE_MARKER.unlink(missing_ok=True)
-        except OSError:
-            pass
-        return None
-    except PermissionError:
-        # The process exists, but this process cannot signal it.
-        pass
-    except OSError:
-        # Be conservative: if process status is uncertain, skip the marked file.
-        return filename
-
-    return filename
+    return open_names
 
 
 def copy_file_atomically(source, destination):
     """Copy to a temporary file first, then replace the destination on success."""
     temp_path = None
+
     try:
         with tempfile.NamedTemporaryFile(
             dir=destination.parent,
@@ -98,6 +75,7 @@ def copy_file_atomically(source, destination):
 
         shutil.copy2(source, temp_path)
         temp_path.replace(destination)
+
     finally:
         if temp_path is not None:
             try:
@@ -106,32 +84,57 @@ def copy_file_atomically(source, destination):
                 pass
 
 
-def sync_closed_files():
-    """Copy local closed DAQ files that are missing or incomplete on the drive.
+def sync_closed_files(active_file=None):
+    """Copy closed local DAQ files missing or incomplete on the network drive.
+
+    `active_file` can be supplied by phaidra.py. When this script is run alone,
+    psutil is used to skip files currently open by a process.
 
     Returns True if the scan completes successfully, otherwise False.
     """
     available, error = check_backup_drive()
+
     if not available:
         print(f"[{timestamp()}] WARNING: Network drive unavailable: {error}")
         return False
 
+    active_name = Path(active_file).name if active_file is not None else None
+
     try:
         local_files = sorted(LOCAL_DIR.glob(f"{FILE_PREFIX}*.txt"))
+        open_names = open_local_daq_files()
+
         for source in local_files:
-            # Recheck the marker before every copy in case acquisition rotated files.
-            if not source.is_file() or source.name == _active_filename():
+            if not source.is_file() or source.name == active_name:
+                continue
+
+            # Skip files that are currently open.
+            if source.name in open_names:
                 continue
 
             destination = BACKUP_DIR / source.name
+
             try:
-                if destination.exists() and destination.stat().st_size == source.stat().st_size:
+                source_size = source.stat().st_size
+
+                # Skip files already present with the same size.
+                if destination.exists() and destination.stat().st_size == source_size:
                     continue
+
+                # Recheck immediately before copying in case the DAQ rotated files.
+                if source.name in open_local_daq_files():
+                    continue
+
+                if source.name == active_name:
+                    continue
+
                 copy_file_atomically(source, destination)
                 print(f"[{timestamp()}] Synced {source.name} to network drive.")
+
             except OSError as error:
                 print(f"[{timestamp()}] WARNING: Could not sync {source.name}: {error}")
                 return False
+
     except OSError as error:
         print(f"[{timestamp()}] WARNING: Could not scan local DAQ files: {error}")
         return False

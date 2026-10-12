@@ -9,3 +9,4 @@ Spectrometer/ml/plots_accelerator/*
 *.pcm
 *.venv/
 *.txt
+*/__pycache__/

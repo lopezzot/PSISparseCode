@@ -29,6 +29,7 @@ import serial
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 from serial.tools import list_ports
+from sync_phaidra_files import sync_closed_files
 
 # parser options
 # --dontsaveondrive will deactivate the backup on disk of closed files
@@ -71,16 +72,6 @@ BACKUP_DIR = Path(
     "/psi.ch/.cifs-server/fs02.psi.ch/ea_messdaten/phaidra/2026/"
 )  # this is where the backup disk is reachable
 
-# Check that the netword drive is reachable, if not, deactivate automatic backup and throw a warning
-if SAVE_ON_DRIVE:
-    try:
-        with tempfile.NamedTemporaryFile(dir=BACKUP_DIR):
-            pass
-    except OSError as error:
-        SAVE_ON_DRIVE = False
-        print(f"WARNING: Cannot access/write to backup drive {BACKUP_DIR}: {error}")
-        print("WARNING: Saving to drive disabled. You can continue working locally.")
-
 
 class PhaiDRAApp:
     """Main GUI application and acquisition controller."""
@@ -105,8 +96,12 @@ class PhaiDRAApp:
         self.acquisition_thread = None
         self.stop_event = threading.Event()
 
-        # Store flag is the program is closing
+        # Store flag if the program is closing
         self.closing = False
+
+        # Variables to check network drive availability
+        self.backup_available = None
+        self.backup_monitor_stop = threading.Event()
 
         # Store a request to rotate the daily output file.
         self.rotate_file_event = threading.Event()
@@ -289,6 +284,13 @@ class PhaiDRAApp:
 
         # Start the periodic GUI update loop.
         self.root.after(100, self.process_data_queue)
+
+        # Thread to monitor  network drive availability
+        if SAVE_ON_DRIVE:
+            threading.Thread(
+                target=self.monitor_backup_drive,
+                daemon=True,
+            ).start()
 
     def create_plots(self):
         """Create the monitoring plots and embed them in the GUI."""
@@ -584,11 +586,38 @@ class PhaiDRAApp:
         )
         self.acquisition_thread.start()
 
-    def backup_file(self, file_path):
-        """Copy a closed file to the drive without interrupting acquisition."""
-        global SAVE_ON_DRIVE
+    def monitor_backup_drive(self):
+        """Monitor the network drive and synchronize closed local files."""
+        while not self.backup_monitor_stop.is_set() and not self.closing:
+            previous_state = self.backup_available
 
-        if not SAVE_ON_DRIVE:
+            try:
+                with tempfile.NamedTemporaryFile(dir=BACKUP_DIR):
+                    pass
+                self.backup_available = True
+
+                if previous_state is not True:
+                    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    print(
+                        f"[{timestamp}] Network drive available. Syncing local files."
+                    )
+
+                    if not sync_closed_files(active_file=self.output_file):
+                        self.backup_available = False
+
+            except OSError as error:
+                self.backup_available = False
+
+                if previous_state is not False:
+                    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    print(f"[{timestamp}] WARNING: Network drive unavailable: {error}")
+                    print(f"[{timestamp}] Continuing local acquisition.")
+
+            self.backup_monitor_stop.wait(60)
+
+    def backup_file(self, file_path):
+        """Copy a closed file to the network drive if available."""
+        if not SAVE_ON_DRIVE or not self.backup_available:
             return
 
         try:
@@ -597,10 +626,10 @@ class PhaiDRAApp:
             print(f"[{timestamp}] Copied {file_path.name} to drive.")
 
         except OSError as error:
-            SAVE_ON_DRIVE = False
+            self.backup_available = False
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             print(f"[{timestamp}] WARNING: Backup failed: {error}")
-            print(f"[{timestamp}] WARNING: Drive backup disabled. Continuing locally.")
+            print(f"[{timestamp}] Continuing local acquisition; will retry.")
 
     def acquire_data(self):
         """Connect to the logger and save each received line to the file."""
@@ -892,6 +921,9 @@ class PhaiDRAApp:
         self.closing = True
         # Request the acquisition thread to stop.
         self.stop_event.set()
+
+        # Stop monitoring thread
+        self.backup_monitor_stop.set()
 
         # Wait briefly for the acquisition thread to finish.
         if self.acquisition_thread and self.acquisition_thread.is_alive():
