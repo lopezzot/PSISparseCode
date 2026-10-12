@@ -85,6 +85,7 @@ Install `pyserial` and `matplotlib`:
 ```bash
 python -m pip install pyserial
 python -m pip install matplotlib
+python -m pip install psutil
 ```
 
 Tkinter is normally available with the standard Python installation.
