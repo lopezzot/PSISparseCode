@@ -3,3 +3,4 @@ matplotlib
 uproot
 torch==2.2.2
 scikit-learn
+ruff
