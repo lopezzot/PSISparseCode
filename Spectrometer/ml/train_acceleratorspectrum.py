@@ -1,15 +1,14 @@
-import uproot
+import argparse
+import copy
+import os
+
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn as nn
-import matplotlib.pyplot as plt
-import os
-import argparse
-import copy
-
+import uproot
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-
 
 # ============================================================
 # Configuration
@@ -40,7 +39,7 @@ RANDOM_SEED = 42
 
 EPOCHS = 1000
 LEARNING_RATE = 1e-3
-PATIENCE = 75 # for early stopping
+PATIENCE = 75  # for early stopping
 
 
 # ============================================================
@@ -49,7 +48,6 @@ PATIENCE = 75 # for early stopping
 
 np.random.seed(RANDOM_SEED)
 torch.manual_seed(RANDOM_SEED)
-
 
 
 # ============================================================
@@ -64,7 +62,6 @@ os.makedirs(PLOT_DIR, exist_ok=True)
 # ============================================================
 
 with uproot.open(ROOT_FILE) as root_file:
-
     tree = root_file[TREE_NAME]
 
     data = tree.arrays(
@@ -161,21 +158,18 @@ Y_test = torch.tensor(Y_test, dtype=torch.float32)
 # Neural network
 # ============================================================
 
-class SpectrumNet(nn.Module):
 
+class SpectrumNet(nn.Module):
     def __init__(self):
         super().__init__()
 
         self.network = nn.Sequential(
             nn.Linear(N_LAYERS, 128),
             nn.ReLU(),
-
             nn.Linear(128, 256),
             nn.ReLU(),
-
             nn.Linear(256, 128),
             nn.ReLU(),
-
             nn.Linear(128, N_BINS),
         )
 
@@ -210,7 +204,6 @@ optimizer = torch.optim.Adam(
 # ============================================================
 
 for epoch in range(EPOCHS):
-
     model.train()
 
     optimizer.zero_grad()
@@ -238,7 +231,6 @@ for epoch in range(EPOCHS):
     model.eval()
 
     with torch.no_grad():
-
         val_logits = model(X_val)
 
         val_prediction = torch.softmax(
@@ -261,18 +253,15 @@ for epoch in range(EPOCHS):
     # --------------------------------------------------------
 
     if validation_loss < best_val_loss:
-
         best_val_loss = validation_loss
         best_epoch = epoch + 1
         best_model_state = copy.deepcopy(model.state_dict())
         epochs_without_improvement = 0
 
     else:
-
         epochs_without_improvement += 1
 
     if (epoch + 1) % 10 == 0:
-
         print(
             f"Epoch {epoch + 1:4d} | "
             f"Train loss = {loss.item():.6f} | "
@@ -284,7 +273,6 @@ for epoch in range(EPOCHS):
     # --------------------------------------------------------
 
     if epochs_without_improvement >= PATIENCE:
-
         print()
         print(
             f"Early stopping at epoch {epoch + 1}. "
@@ -367,8 +355,7 @@ print(f"Training history saved in: {loss_plot_filename}")
 model.eval()
 
 with torch.no_grad():
-
-    test_logits = model(X_test) # get predicted output
+    test_logits = model(X_test)  # get predicted output
 
     # transform predicted output in a spectrum
     test_prediction = torch.softmax(
@@ -399,14 +386,9 @@ Y_true = Y_test.numpy()
 # Energy bin centers
 # ============================================================
 
-bin_width = (
-    ENERGY_MAX - ENERGY_MIN
-) / N_BINS
+bin_width = (ENERGY_MAX - ENERGY_MIN) / N_BINS
 
-energy_bins = (
-    ENERGY_MIN
-    + (np.arange(N_BINS) + 0.5) * bin_width
-)
+energy_bins = ENERGY_MIN + (np.arange(N_BINS) + 0.5) * bin_width
 
 # ============================================================
 # Fluence-to-ambient-dose-equivalent conversion coefficients
@@ -414,83 +396,87 @@ energy_bins = (
 
 # Tabulated conversion coefficients:
 # H*(10) / Phi [Sv cm^2]
-conversion_energy = np.array([
-    1.0e-02,
-    1.5e-02,
-    2.0e-02,
-    3.0e-02,
-    4.0e-02,
-    5.0e-02,
-    6.0e-02,
-    8.0e-02,
-    1.0e-01,
-    1.5e-01,
-    2.0e-01,
-    3.0e-01,
-    4.0e-01,
-    5.0e-01,
-    6.0e-01,
-    8.0e-01,
-    1.0e+00,
-    1.5e+00,
-    2.0e+00,
-    3.0e+00,
-    4.0e+00,
-    5.0e+00,
-    6.0e+00,
-    8.0e+00,
-    1.0e+01,
-    2.0e+01,
-    3.0e+01,
-    4.0e+01,
-    5.0e+01,
-    1.0e+02,
-    2.0e+02,
-    5.0e+02,
-    1.0e+03,
-    2.0e+03,
-    5.0e+03,
-    1.0e+04,
-])
+conversion_energy = np.array(
+    [
+        1.0e-02,
+        1.5e-02,
+        2.0e-02,
+        3.0e-02,
+        4.0e-02,
+        5.0e-02,
+        6.0e-02,
+        8.0e-02,
+        1.0e-01,
+        1.5e-01,
+        2.0e-01,
+        3.0e-01,
+        4.0e-01,
+        5.0e-01,
+        6.0e-01,
+        8.0e-01,
+        1.0e00,
+        1.5e00,
+        2.0e00,
+        3.0e00,
+        4.0e00,
+        5.0e00,
+        6.0e00,
+        8.0e00,
+        1.0e01,
+        2.0e01,
+        3.0e01,
+        4.0e01,
+        5.0e01,
+        1.0e02,
+        2.0e02,
+        5.0e02,
+        1.0e03,
+        2.0e03,
+        5.0e03,
+        1.0e04,
+    ]
+)
 
-conversion_factor = np.array([
-    8.33e-14,
-    8.52e-13,
-    1.05e-12,
-    0.80e-12,
-    0.62e-12,
-    0.52e-12,
-    0.51e-12,
-    0.56e-12,
-    0.62e-12,
-    0.87e-12,
-    1.23e-12,
-    1.81e-12,
-    2.36e-12,
-    2.78e-12,
-    3.46e-12,
-    4.29e-12,
-    5.18e-12,
-    6.92e-12,
-    8.25e-12,
-    1.04e-11,
-    1.07e-11,
-    1.04e-11,
-    9.58e-12,
-    9.10e-12,
-    8.76e-12,
-    8.29e-12,
-    8.23e-12,
-    8.26e-12,
-    8.64e-12,
-    9.00e-12,
-    1.02e-11,
-    1.18e-11,
-    1.17e-11,
-    1.15e-11,
-    1.33e-11,
-    1.22e-11,
-])
+conversion_factor = np.array(
+    [
+        8.33e-14,
+        8.52e-13,
+        1.05e-12,
+        0.80e-12,
+        0.62e-12,
+        0.52e-12,
+        0.51e-12,
+        0.56e-12,
+        0.62e-12,
+        0.87e-12,
+        1.23e-12,
+        1.81e-12,
+        2.36e-12,
+        2.78e-12,
+        3.46e-12,
+        4.29e-12,
+        5.18e-12,
+        6.92e-12,
+        8.25e-12,
+        1.04e-11,
+        1.07e-11,
+        1.04e-11,
+        9.58e-12,
+        9.10e-12,
+        8.76e-12,
+        8.29e-12,
+        8.23e-12,
+        8.26e-12,
+        8.64e-12,
+        9.00e-12,
+        1.02e-11,
+        1.18e-11,
+        1.17e-11,
+        1.15e-11,
+        1.33e-11,
+        1.22e-11,
+    ]
+)
 
 # Interpolate the conversion coefficients at the centers
 # of the 50 energy bins used by the neural network.
@@ -560,17 +546,9 @@ DETECTOR_AREA_CM2 = 100.0
 #
 #   fluence = number of photons / detector area
 #
-true_fluence = (
-    N_PRIMARY_GAMMAS
-    * Y_true
-    / DETECTOR_AREA_CM2
-)
+true_fluence = N_PRIMARY_GAMMAS * Y_true / DETECTOR_AREA_CM2
 
-pred_fluence = (
-    N_PRIMARY_GAMMAS
-    * Y_pred
-    / DETECTOR_AREA_CM2
-)
+pred_fluence = N_PRIMARY_GAMMAS * Y_pred / DETECTOR_AREA_CM2
 
 # Calculate H*(10) by folding the fluence spectrum
 # with the energy-dependent fluence-to-H*(10)
@@ -584,14 +562,12 @@ pred_fluence = (
 #
 # The resulting H*(10) is expressed in Sv per event.
 true_Hstar10 = np.sum(
-    true_fluence
-    * conversion_factor_bins[None, :],
+    true_fluence * conversion_factor_bins[None, :],
     axis=1,
 )
 
 pred_Hstar10 = np.sum(
-    pred_fluence
-    * conversion_factor_bins[None, :],
+    pred_fluence * conversion_factor_bins[None, :],
     axis=1,
 )
 
@@ -599,32 +575,17 @@ pred_Hstar10 = np.sum(
 # H*(10) errors
 # ============================================================
 
-Hstar10_error = (
-    pred_Hstar10 - true_Hstar10
-)
+Hstar10_error = pred_Hstar10 - true_Hstar10
 
-Hstar10_relative_error = (
-    Hstar10_error / true_Hstar10
-)
+Hstar10_relative_error = Hstar10_error / true_Hstar10
 
-Hstar10_mae = np.mean(
-    np.abs(Hstar10_error)
-)
+Hstar10_mae = np.mean(np.abs(Hstar10_error))
 
-Hstar10_rmse = np.sqrt(
-    np.mean(Hstar10_error ** 2)
-)
+Hstar10_rmse = np.sqrt(np.mean(Hstar10_error**2))
 
-Hstar10_mean_error = np.mean(
-    Hstar10_error
-)
+Hstar10_mean_error = np.mean(Hstar10_error)
 
-Hstar10_mean_absolute_relative_error = (
-    np.mean(
-        np.abs(Hstar10_relative_error)
-    )
-    * 100.0
-)
+Hstar10_mean_absolute_relative_error = np.mean(np.abs(Hstar10_relative_error)) * 100.0
 
 print()
 print("Ambient dose equivalent H*(10):")
@@ -669,52 +630,62 @@ print(
 # Global spectral MAE
 # ============================================================
 
-spectral_mae = np.mean(
-    np.abs(Y_pred - Y_true)
-)
+spectral_mae = np.mean(np.abs(Y_pred - Y_true))
 
 print()
 print("Global spectral MAE:", spectral_mae)
 
+
 # ============================================================
-# Peak position reconstruction
+# Local peak finder
 # ============================================================
 
-# Find the energy bin with the maximum probability
-# for each true spectrum and each reconstructed spectrum.
-#
-# This represents the reconstructed peak position,
-# not the mean energy of the complete spectrum.
-true_peak_indices = np.argmax(
-    Y_true,
-    axis=1,
-)
 
-pred_peak_indices = np.argmax(
-    Y_pred,
-    axis=1,
-)
+def find_spectral_peak(spectrum, min_energy_MeV=50.0):
+    """
+    Find the global maximum after excluding the low-energy bins.
+    """
+    spectrum = np.asarray(spectrum, dtype=float)
 
-# Convert peak-bin indices into physical energies
-# using the corresponding bin centers.
-true_peak_energy = energy_bins[
-    true_peak_indices
-]
+    # Consider only bins above the selected energy threshold.
+    valid_indices = np.where(energy_bins >= min_energy_MeV)[0]
 
-pred_peak_energy = energy_bins[
-    pred_peak_indices
-]
+    if len(valid_indices) == 0:
+        return None
 
-# Calculate the peak-position error for every event.
-#
-# Positive value:
-#   predicted peak is at higher energy than the true peak.
-#
-# Negative value:
-#   predicted peak is at lower energy than the true peak.
-peak_error = (
-    pred_peak_energy
-    - true_peak_energy
+    # Find the maximum within the restricted energy range.
+    local_index = np.argmax(spectrum[valid_indices])
+
+    # Return the index in the original spectrum.
+    return valid_indices[local_index]
+
+
+# ============================================================
+# Peak position reconstruction using local maxima
+# ============================================================
+
+true_peak_energy = np.full(len(Y_true), np.nan)
+pred_peak_energy = np.full(len(Y_pred), np.nan)
+
+for i in range(len(Y_true)):
+    true_index = find_spectral_peak(Y_true[i])
+    pred_index = find_spectral_peak(Y_pred[i])
+
+    if true_index is not None:
+        true_peak_energy[i] = energy_bins[true_index]
+
+    if pred_index is not None:
+        pred_peak_energy[i] = energy_bins[pred_index]
+
+peak_error = pred_peak_energy - true_peak_energy
+
+valid_peaks = np.isfinite(true_peak_energy) & np.isfinite(pred_peak_energy)
+
+print(
+    "Events with a detected true and predicted peak:",
+    np.count_nonzero(valid_peaks),
+    "/",
+    len(Y_true),
 )
 
 
@@ -722,17 +693,11 @@ peak_error = (
 # Peak position statistics
 # ============================================================
 
-peak_mean_error = np.mean(
-    peak_error
-)
+peak_mean_error = np.mean(peak_error)
 
-peak_mae = np.mean(
-    np.abs(peak_error)
-)
+peak_mae = np.mean(np.abs(peak_error))
 
-peak_rmse = np.sqrt(
-    np.mean(peak_error ** 2)
-)
+peak_rmse = np.sqrt(np.mean(peak_error**2))
 
 
 print()
@@ -759,11 +724,6 @@ print(
 # ============================================================
 # True vs predicted peak position
 # ============================================================
-
-true_peak_indices = np.argmax(Y_true, axis=1)
-pred_peak_indices = np.argmax(Y_pred, axis=1)
-true_peak_energy = energy_bins[true_peak_indices]
-pred_peak_energy = energy_bins[pred_peak_indices]
 
 plt.figure(figsize=(7, 7))
 
@@ -816,10 +776,7 @@ plt.savefig(
 plt.close()
 
 print()
-print(
-    f"Peak-position scatter plot saved in: "
-    f"{peak_scatter_filename}"
-)
+print(f"Peak-position scatter plot saved in: {peak_scatter_filename}")
 
 # ============================================================
 # Peak position error distribution
@@ -839,15 +796,11 @@ plt.axvline(
     label="Zero error",
 )
 
-plt.xlabel(
-    "Peak position error [MeV]"
-)
+plt.xlabel("Peak position error [MeV]")
 
 plt.ylabel("Number of test events")
 
-plt.title(
-    "Distribution of peak position errors"
-)
+plt.title("Distribution of peak position errors")
 
 plt.legend()
 plt.grid(True, alpha=0.3)
@@ -867,10 +820,7 @@ plt.savefig(
 
 plt.close()
 
-print(
-    f"Peak-error histogram saved in: "
-    f"{peak_error_hist_filename}"
-)
+print(f"Peak-error histogram saved in: {peak_error_hist_filename}")
 
 # ============================================================
 # Save reconstructed spectra plots
@@ -888,7 +838,6 @@ plot_indices = np.linspace(
 
 
 for plot_number, index in enumerate(plot_indices):
-
     plt.figure(figsize=(9, 5))
 
     plt.step(
@@ -992,10 +941,7 @@ plt.savefig(
 plt.close()
 
 print()
-print(
-    f"H*(10) scatter plot saved in: "
-    f"{Hstar10_scatter_filename}"
-)
+print(f"H*(10) scatter plot saved in: {Hstar10_scatter_filename}")
 
 # ============================================================
 # H*(10) error distribution
@@ -1037,10 +983,7 @@ plt.savefig(
 
 plt.close()
 
-print(
-    f"H*(10) error histogram saved in: "
-    f"{Hstar10_error_filename}"
-)
+print(f"H*(10) error histogram saved in: {Hstar10_error_filename}")
 
 # ============================================================
 # Relative H*(10) error distribution
@@ -1048,9 +991,7 @@ print(
 
 # Convert the relative dose error from a fraction
 # to a percentage.
-Hstar10_relative_error_percent = (
-    Hstar10_relative_error * 100.0
-)
+Hstar10_relative_error_percent = Hstar10_relative_error * 100.0
 
 plt.figure(figsize=(8, 5))
 
@@ -1066,17 +1007,11 @@ plt.axvline(
     label="Zero error",
 )
 
-plt.xlabel(
-    "Relative H*(10) error [%]"
-)
+plt.xlabel("Relative H*(10) error [%]")
 
-plt.ylabel(
-    "Number of test events"
-)
+plt.ylabel("Number of test events")
 
-plt.title(
-    "Distribution of relative H*(10) reconstruction errors"
-)
+plt.title("Distribution of relative H*(10) reconstruction errors")
 
 plt.legend()
 plt.grid(True, alpha=0.3)
@@ -1096,7 +1031,4 @@ plt.savefig(
 
 plt.close()
 
-print(
-    f"Relative H*(10) error histogram saved in: "
-    f"{Hstar10_relative_error_filename}"
-)
+print(f"Relative H*(10) error histogram saved in: {Hstar10_relative_error_filename}")
