@@ -759,20 +759,23 @@ class PhaiDRAApp:
                         errors="replace",
                     ).rstrip("\r\n")
 
-                    if PRINT_TO_TERMINAL:
-                        print(line, flush=True)  # print to terminal in debug mode.
-
                     # Ignore empty lines.
                     if not line:
                         continue
 
-                    # Write exactly one logger line to the current daily file.
-                    data_file.write(line + "\n")
+                    # Append the laptop date and time to the logger line.
+                    laptop_timestamp = datetime.now().strftime("%d.%m.%y %H:%M:%S")
+                    output_line = f"{line} {laptop_timestamp}"
 
-                    # Flush immediately so the data is available on disk.
+                    # Print the augmented line when terminal output is enabled.
+                    if PRINT_TO_TERMINAL:
+                        print(output_line, flush=True)
+
+                    # Write the augmented line to the output file.
+                    data_file.write(output_line + "\n")
                     data_file.flush()
 
-                    # Parse the received logger line for monitoring data.
+                    # Parse the original logger line for monitoring data.
                     parsed_data = self.parse_logger_line(line)
 
                     # Add valid parsed data to the GUI queue.
