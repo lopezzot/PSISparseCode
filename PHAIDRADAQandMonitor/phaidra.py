@@ -376,7 +376,7 @@ class PhaiDRAApp:
         )
 
     def parse_logger_line(self, line):
-        """Parse one logger line and extract the timestamp and monitored channels."""
+        """Parse one logger line and extract the monitored channels."""
 
         # Split the ASCII line into individual fields.
         fields = line.split()
@@ -386,11 +386,10 @@ class PhaiDRAApp:
             return None
 
         try:
-            # Parse the date and time reported by the logger.
-            timestamp = datetime.strptime(
-                f"{fields[1]} {fields[2]}",
-                "%d.%m.%y %H:%M:%S",
-            )
+            # Use the laptop's local date and time for monitoring plots.
+            # This was introduced because the logger date can be wrong,
+            # only in the monitoring plot I use the date from the laptop.
+            timestamp = datetime.now()
 
             # Extract the requested channel counts.
             channel_values = {
