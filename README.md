@@ -4,6 +4,7 @@
 - [REMCounterTiming](REMCounterTiming): Code to simulate a REM counter signal at different neutron burst durations and repetition rates.
 - [Spectrometer](Spectrometer): Investigation code for a machine learning gamma spectrometer made of a longitudinally segmented calorimeter.
 - [PHAIDRADAQandMonitor](PHAIDRADAQandMonitor): DAQ and monitoring system for the PHAIDRA facility at PSI.
+- [REMCounterEquations](REMCounterEquations): Python code to create plots from a set of equations that describe a REM counter behavior in a neutron pulsed field.
 
 ## A collection of presentations prepared at PSI
 
