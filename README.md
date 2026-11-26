@@ -18,3 +18,6 @@
 - [Update on the SwissFEL 2025 measurement campaign & SWISSELITE EMPANADE Project](https://dpsich-my.sharepoint.com/:b:/g/personal/lorenzo_pezzotti_psi_ch/IQDZ7RfmUN5HQoEx5fDv9JcRARHAyvZhXXTs9zUpVLFcN_E?e=i679Ac), PSI meeting, 6/8/2026 (PSI restricted link)
 - [SWISSELITE EMAPANADE Project: Activities at PSI](https://dpsich-my.sharepoint.com/:b:/g/personal/lorenzo_pezzotti_psi_ch/IQDZD2R421Z4RJgHkFo17kr7AXsPplBN0-8Ra3Khfk6aETs?e=kGrsIH), SwissELITE EMPANADE meeting, 12/8/2026 (PSI restricted link)
 - [Accelerator-based pulsed fields measurement campaigns at PSI](https://dpsich-my.sharepoint.com/:b:/g/personal/lorenzo_pezzotti_psi_ch/IQCarCzmL4TgRqkynXuIhqC3ASUzGCzEhrNxgePK2soSYdo?e=4M7eHR), SwissELITE EMPANADE meeting, 26/10/2026 (PSI restricted link)
+
+### ASI Expertise and Analysis
+- [The ESA Radioisotope Power Systems and SwissELITE Projects](https://dpsich-my.sharepoint.com/:b:/g/personal/lorenzo_pezzotti_psi_ch/IQDmoev1f3OlSreEJez50DvjAQA6hiI6IawxrwYxkon_Pdc?e=ic9du5), ASI E&A Expertisenaustausch meeting, 26/11/2026 (PSI restricted link)
